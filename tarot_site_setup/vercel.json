@@ -1,0 +1,9 @@
+
+{
+  "functions": {
+    "api/**": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "regions": ["cdg1", "fra1", "iad1"]
+}
