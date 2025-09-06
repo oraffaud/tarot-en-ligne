@@ -1,0 +1,101 @@
+export default async function handler(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  const { cards = [], question = '', lang = 'fr', consent = false } = req.body || {};
+  if (!process.env.OPENAI_API_KEY) {
+    return res.status(500).json({ error: 'Missing OPENAI_API_KEY' });
+  }
+
+  // Prépare un prompt structuré → réponse JSON
+  const sys = lang === 'en'
+    ? "You are a professional tarot reader. Produce a careful, ethical, **structured** analysis. NEVER give medical/financial/legal advice."
+    : "Tu es un(e) tarologue professionnel(le). Donne une analyse **structurée** et prudente. NE FOURNIS PAS de conseils médicaux/financiers/juridiques.";
+
+  const input = {
+    language: lang,
+    question,
+    spreadSize: Math.max(1, Math.min(5, cards.length)),
+    cards: cards.map(c => ({ name: c.name, upright: c.up, reversed: c.rev })),
+    format: {
+      type: "object",
+      properties: {
+        overview: { type: "string" },
+        positions: { type: "array", items: { type: "object", properties: {
+          label: { type: "string" },
+          card: { type: "string" },
+          keyThemes: { type: "array", items: { type: "string" } },
+          opportunities: { type: "string" },
+          cautions: { type: "string" }
+        } } },
+        synthesis: { type: "string" },
+        actions_7days: { type: "array", items: { type: "string" } },
+        tone: { type: "string" }
+      },
+      required: ["overview","positions","synthesis","actions_7days","tone"]
+    }
+  };
+
+  // Choix de modèle: léger et économique, ajustable
+  const model = process.env.OPENAI_MODEL || "gpt-4.1-mini";
+
+  try {
+    // Appel API OpenAI (Responses API)
+    const r = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        input: [
+          { role: "system", content: sys },
+          { role: "user", content: `Cards: ${JSON.stringify(input.cards)}; Question: ${question || '(none)'}; Language: ${lang}; Spread: ${input.spreadSize}. Please answer in ${lang}.` }
+        ],
+        // Demande un JSON strict en sortie
+        response_format: { type: "json_object" },
+        temperature: 0.6
+      })
+    });
+
+    if (!r.ok) {
+      const t = await r.text();
+      return res.status(500).json({ error: "OpenAI error", detail: t });
+    }
+
+    const data = await r.json();
+    // Selon Responses API, le JSON est dans output_text (ou first item)
+    const raw = data?.output?.[0]?.content?.[0]?.text || data?.output_text || JSON.stringify(data);
+    let parsed;
+    try { parsed = JSON.parse(raw); } catch { parsed = { overview: raw, positions: [], synthesis: "", actions_7days: [], tone: "" }; }
+
+    // Log ML (si consentement et si on n'est pas en env. serverless read-only)
+    if (consent && process.env.LOG_TO_DISK !== 'false') {
+      try {
+        // ⚠️ Sur Vercel prod, FS est éphémère : préférer une DB (ex. Postgres). Ici on log local/dev.
+        const fs = await import('fs');
+        const line = JSON.stringify({
+          ts: new Date().toISOString(),
+          lang, question,
+          cards: input.cards,
+          model, parsed
+        }) + "\n";
+        fs.appendFileSync('data/premium_logs.jsonl', line, 'utf8');
+      } catch {}
+    }
+
+    const pretty = [
+      parsed.overview,
+      "",
+      ...(parsed.positions || []).map(p => `• ${p.label} — ${p.card}\n  Thèmes: ${(p.keyThemes||[]).join(', ')}\n  + ${p.opportunities}\n  ! ${p.cautions}`),
+      "",
+      `Synthèse: ${parsed.synthesis}`,
+      `Actions (7 jours): ${(parsed.actions_7days||[]).map(a=>`- ${a}`).join('\n')}`,
+      `Tonalité: ${parsed.tone}`
+    ].join("\n");
+
+    return res.status(200).json({ parsed, pretty });
+  } catch (e) {
+    return res.status(500).json({ error: e.message || 'Unknown error' });
+  }
+}
