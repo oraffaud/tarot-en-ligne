@@ -1,0 +1,10 @@
+export default function Header() {
+  return (
+    <header className="p-4 flex items-center justify-between">
+      <div className="flex items-center space-x-2">
+        <img src="/logo-nanou.svg" alt="Les tarots de Nanou" className="w-10 h-10" />
+        <span className="font-semibold text-lg">Les tarots de Nanou</span>
+      </div>
+    </header>
+  );
+}
