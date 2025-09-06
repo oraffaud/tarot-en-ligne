@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="300" height="420">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6D28D9"/>
+      <stop offset="100%" stop-color="#3B82F6"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="300" height="420" rx="16" fill="url(#g)"/>
+  <rect x="14" y="14" width="272" height="392" rx="12" fill="white" opacity="0.12"/>
+  <text x="150" y="80" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="18" fill="#FFFFFF">Le Mat (0)</text>
+  <circle cx="150" cy="210" r="56" fill="white" opacity="0.1"/>
+  <text x="150" y="220" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="48" fill="#FFFFFF">0</text>
+  <text x="150" y="360" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" fill="#E5E7EB">Arcana — Aperçu visuel</text>
+</svg>

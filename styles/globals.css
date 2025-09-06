@@ -3,3 +3,5 @@
 @tailwind utilities;
 
 html, body, #__next { height: 100%; }
+.no-rotate{transform:none!important;rotate:0deg!important;}
+img.no-rotate{image-orientation:none!important;}

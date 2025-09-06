@@ -1,3 +1,35 @@
+#!/usr/bin/env bash
+set -e -o pipefail
+
+[ -f package.json ] || { echo "❌ Lance ce script à la racine du projet"; exit 1; }
+mkdir -p .backup_tarot
+
+# 1) Composant carte : AUCUNE rotation possible
+cp components/TarotCard.js ".backup_tarot/TarotCard.js.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+cat > components/TarotCard.js <<'JS'
+export default function TarotCard({ name, meaning, index }) {
+  const jpg = `/cards/${index}.jpg`;
+  const svg = `/cards/${index}.svg`;
+  return (
+    <div className="w-44 h-60 bg-white/10 rounded-xl shadow-lg flex items-center justify-center text-center p-3">
+      <img
+        src={jpg}
+        alt={name}
+        onError={(e) => { e.currentTarget.onerror=null; e.currentTarget.src = svg; }}
+        className="w-full h-full object-contain rounded-lg"
+        draggable={false}
+      />
+      <span className="sr-only">
+        {name}
+      </span>
+    </div>
+  );
+}
+JS
+
+# 2) Page d'accueil : ne génère JAMAIS 'reversed'; supprime le toggle
+cp pages/index.js ".backup_tarot/index.js.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+cat > pages/index.js <<'JS'
 import Head from 'next/head'
 import { useMemo, useState, useEffect } from 'react'
 import Header from '../components/Header'
@@ -134,3 +166,7 @@ export default function Home() {
     </div>
   )
 }
+JS
+
+echo "✅ Patches appliqués. Sauvegardes dans .backup_tarot/"
+echo "▶️  Maintenant : npm run dev (puis recharge la page)"

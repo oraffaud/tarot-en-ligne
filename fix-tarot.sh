@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Vérif racine projet
+[ -f package.json ] || { echo "Ce script doit être lancé à la racine du projet"; exit 1; }
+
+PAGES_DIR="pages"
+COMP_DIR="components"
+mkdir -p .backup_tarot && TS=$(date +%Y%m%d_%H%M%S)
+
+# Sauvegardes
+[ -f "$COMP_DIR/TarotCard.js" ] && cp "$COMP_DIR/TarotCard.js" ".backup_tarot/TarotCard.js.$TS" || true
+[ -f "$PAGES_DIR/index.js" ] && cp "$PAGES_DIR/index.js" ".backup_tarot/index.js.$TS" || true
+
+# components/TarotCard.js
+cat > "$COMP_DIR/TarotCard.js" <<'JS'
+export default function TarotCard({ name, reversed, meaning }) {
+  return (
+    <div className="w-44 h-60 bg-white/10 rounded-xl shadow-lg flex items-center justify-center text-center p-3 rotate-0">
+      <div className={reversed ? "rotate-180 transition" : ""}>
+        <div className="text-sm opacity-70">Arcana</div>
+        <div className="text-lg font-semibold mt-2">{name}</div>
+        <div className="text-xs opacity-80 mt-3">
+          {reversed ? `Inversée: ${meaning.rev}` : `Droite: ${meaning.up}`}
+        </div>
+      </div>
+    </div>
+  );
+}
+JS
+
+# pages/index.js
+cat > "$PAGES_DIR/index.js" <<'JS'
+import Head from 'next/head'
+import { useMemo, useState } from 'react'
+import Header from '../components/Header'
+import TarotCard from '../components/TarotCard'
+
+const PAYMENT_LINK = process.env.NEXT_PUBLIC_PAYMENT_LINK_URL || '#'
+
+const MAJOR_ARCANA = [
+  { name: "Le Mat (0)", up: "Nouveaux départs, foi", rev: "Imprudence, naïveté" },
+  { name: "Le Magicien (I)", up: "Volonté, ressources", rev: "Manipulation, illusions" },
+  { name: "La Papesse (II)", up: "Intuition, mystère", rev: "Secrets, blocage" },
+  { name: "L’Impératrice (III)", up: "Abondance, soin", rev: "Dépendance, stagnation" },
+  { name: "L’Empereur (IV)", up: "Structure, autorité", rev: "Rigidité, domination" },
+  { name: "Le Pape (V)", up: "Tradition, guidance", rev: "Dogmatisme, rébellion" },
+  { name: "Les Amoureux (VI)", up: "Choix, harmonie", rev: "Dissonance, doute" },
+  { name: "Le Chariot (VII)", up: "Volonté, progrès", rev: "Dispersion, indécision" },
+  { name: "La Justice (VIII)", up: "Équité, vérité", rev: "Injustice, déséquilibre" },
+  { name: "L’Hermite (IX)", up: "Recherche, sagesse", rev: "Isolement, fuite" },
+  { name: "La Roue (X)", up: "Cycles, tournant", rev: "Résistance au changement" },
+  { name: "La Force (XI)", up: "Courage, maîtrise", rev: "Insécurité, impulsivité" },
+  { name: "Le Pendu (XII)", up: "Lâcher-prise, regard neuf", rev: "Blocage, stagnation" },
+  { name: "La Mort (XIII)", up: "Transformation", rev: "Attachement, peur" },
+  { name: "Tempérance (XIV)", up: "Modération, alchimie", rev: "Excès, impatience" },
+  { name: "Le Diable (XV)", up: "Attachements, matérialisme", rev: "Libération" },
+  { name: "La Tour (XVI)", up: "Révélation, rupture", rev: "Retard du nécessaire" },
+  { name: "L’Étoile (XVII)", up: "Espoir, inspiration", rev: "Doute" },
+  { name: "La Lune (XVIII)", up: "Rêves, intuition", rev: "Confusion, peur" },
+  { name: "Le Soleil (XIX)", up: "Joie, clarté", rev: "Arrogance" },
+  { name: "Le Jugement (XX)", up: "Réveil, bilan", rev: "Auto-critique, hésitation" },
+  { name: "Le Monde (XXI)", up: "Accomplissement, unité", rev: "Boucle inachevée" },
+];
+
+const shuffle = (arr) => {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+};
+
+const drawCards = (count) =>
+  shuffle(MAJOR_ARCANA)
+    .slice(0, count)
+    .map(c => ({ ...c, reversed: Math.random() < 0.48 }));
+
+export default function Home() {
+  const [count, setCount] = useState(3);
+  const [cards, setCards] = useState(() => drawCards(3));
+  const onNewDraw = () => setCards(drawCards(count));
+
+  const options = useMemo(() => ([
+    { id: 1, label: "1 carte" },
+    { id: 3, label: "3 cartes (Passé • Présent • Futur)" },
+    { id: 5, label: "5 cartes (Croix simple)" },
+  ]), []);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-violet-900 to-violet-700 text-white">
+      <Head>
+        <title>Arcana — Tarot en ligne</title>
+        <meta name="description" content="Tirage de tarot en ligne & lecture premium" />
+      </Head>
+
+      <Header />
+
+      <main className="max-w-4xl mx-auto p-6">
+        {/* HERO */}
+        <section className="grid md:grid-cols-2 gap-8 items-center py-12">
+          <div>
+            <h1 className="text-4xl font-bold mb-4">Tirez les cartes, éclairez votre chemin</h1>
+            <p className="mb-6 text-violet-100">Tirage instantané gratuit. Pour une lecture détaillée et personnalisée, cliquez sur Lecture Premium.</p>
+            <div className="flex flex-wrap gap-3">
+              <button onClick={onNewDraw} className="bg-white/10 px-4 py-2 rounded-lg">Nouveau tirage</button>
+              <a href={PAYMENT_LINK} className="bg-yellow-400 text-violet-900 px-4 py-2 rounded-lg font-semibold">Lecture Premium — 19€</a>
+            </div>
+            <div className="mt-4 flex gap-2 text-sm">
+              {options.map(o => (
+                <button
+                  key={o.id}
+                  onClick={() => setCount(o.id)}
+                  className={`px-3 py-1 rounded-lg border border-white/20 ${count===o.id ? 'bg-white/20' : 'bg-white/5'}`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Aperçu cartes */}
+          <div className="flex justify-center">
+            <div className="space-x-[-40px] flex items-end">
+              {cards.slice(0, Math.min(3, cards.length)).map((c, i) => (
+                <TarotCard key={i} name={c.name} reversed={c.reversed} meaning={{up:c.up, rev:c.rev}} />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Résultat complet */}
+        <section className="bg-white/10 p-6 rounded-lg">
+          <h2 className="text-2xl font-semibold mb-4">Tirage actuel ({count} carte{count>1?'s':''})</h2>
+          <div className={`grid gap-4 ${count===1?'grid-cols-1':'grid-cols-1 md:grid-cols-3'}`}>
+            {cards.slice(0, count).map((c, i) => (
+              <TarotCard key={i} name={c.name} reversed={c.reversed} meaning={{up:c.up, rev:c.rev}} />
+            ))}
+          </div>
+        </section>
+      </main>
+    </div>
+  )
+}
+JS
+
+echo "✅ Mis à jour : $COMP_DIR/TarotCard.js, $PAGES_DIR/index.js (sauvegardes dans .backup_tarot)"

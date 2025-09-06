@@ -1,3 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+[ -f package.json ] || { echo "❌ Lance ce script à la racine du projet (package.json introuvable)"; exit 1; }
+[ -d pages ] || { echo "❌ Dossier pages/ introuvable"; exit 1; }
+mkdir -p .backup_tarot && cp pages/index.js ".backup_tarot/index.js.$(date +%Y%m%d_%H%M%S)" 2>/dev/null || true
+
+cat > pages/index.js <<'JS'
 import Head from 'next/head'
 import { useMemo, useState, useEffect } from 'react'
 import Header from '../components/Header'
@@ -5,32 +13,33 @@ import TarotCard from '../components/TarotCard'
 
 const PAYMENT_LINK = process.env.NEXT_PUBLIC_PAYMENT_LINK_URL || '#'
 
-// Ordre RWS
+// 22 Arcanes majeurs (résumé)
 const MAJOR_ARCANA = [
-  { name: "Le Mat (0)", up: "Nouveaux départs, foi", rev: "Imprudence, naïveté" },            // 0
-  { name: "Le Magicien (I)", up: "Volonté, ressources", rev: "Manipulation, illusions" },     // 1
-  { name: "La Papesse (II)", up: "Intuition, mystère", rev: "Secrets, blocage" },             // 2
-  { name: "L’Impératrice (III)", up: "Abondance, soin", rev: "Dépendance, stagnation" },      // 3
-  { name: "L’Empereur (IV)", up: "Structure, autorité", rev: "Rigidité, domination" },        // 4
-  { name: "Le Pape (V)", up: "Tradition, guidance", rev: "Dogmatisme, rébellion" },           // 5
-  { name: "Les Amoureux (VI)", up: "Choix, harmonie", rev: "Dissonance, doute" },             // 6
-  { name: "Le Chariot (VII)", up: "Volonté, progrès", rev: "Dispersion, indécision" },        // 7
-  { name: "La Force (VIII)", up: "Courage, maîtrise", rev: "Insécurité, impulsivité" },       // 8
-  { name: "L’Hermite (IX)", up: "Recherche, sagesse", rev: "Isolement, fuite" },              // 9
-  { name: "La Roue de Fortune (X)", up: "Cycles, tournant", rev: "Résistance au changement" },// 10
-  { name: "La Justice (XI)", up: "Équité, vérité", rev: "Injustice, déséquilibre" },          // 11
-  { name: "Le Pendu (XII)", up: "Lâcher-prise, regard neuf", rev: "Blocage, stagnation" },    // 12
-  { name: "La Mort (XIII)", up: "Transformation", rev: "Attachement, peur" },                 // 13
-  { name: "Tempérance (XIV)", up: "Modération, alchimie", rev: "Excès, impatience" },         // 14
-  { name: "Le Diable (XV)", up: "Attachements, matérialisme", rev: "Libération" },            // 15
-  { name: "La Tour (XVI)", up: "Révélation, rupture", rev: "Retard du nécessaire" },          // 16
-  { name: "L’Étoile (XVII)", up: "Espoir, inspiration", rev: "Doute" },                       // 17
-  { name: "La Lune (XVIII)", up: "Rêves, intuition", rev: "Confusion, peur" },                // 18
-  { name: "Le Soleil (XIX)", up: "Joie, clarté", rev: "Arrogance" },                          // 19
-  { name: "Le Jugement (XX)", up: "Réveil, bilan", rev: "Auto-critique, hésitation" },        // 20
-  { name: "Le Monde (XXI)", up: "Accomplissement, unité", rev: "Boucle inachevée" },          // 21
+  { name: "Le Mat (0)", up: "Nouveaux départs, foi", rev: "Imprudence, naïveté" },
+  { name: "Le Magicien (I)", up: "Volonté, ressources", rev: "Manipulation, illusions" },
+  { name: "La Papesse (II)", up: "Intuition, mystère", rev: "Secrets, blocage" },
+  { name: "L’Impératrice (III)", up: "Abondance, soin", rev: "Dépendance, stagnation" },
+  { name: "L’Empereur (IV)", up: "Structure, autorité", rev: "Rigidité, domination" },
+  { name: "Le Pape (V)", up: "Tradition, guidance", rev: "Dogmatisme, rébellion" },
+  { name: "Les Amoureux (VI)", up: "Choix, harmonie", rev: "Dissonance, doute" },
+  { name: "Le Chariot (VII)", up: "Volonté, progrès", rev: "Dispersion, indécision" },
+  { name: "La Justice (VIII)", up: "Équité, vérité", rev: "Injustice, déséquilibre" },
+  { name: "L’Hermite (IX)", up: "Recherche, sagesse", rev: "Isolement, fuite" },
+  { name: "La Roue (X)", up: "Cycles, tournant", rev: "Résistance au changement" },
+  { name: "La Force (XI)", up: "Courage, maîtrise", rev: "Insécurité, impulsivité" },
+  { name: "Le Pendu (XII)", up: "Lâcher-prise, regard neuf", rev: "Blocage, stagnation" },
+  { name: "La Mort (XIII)", up: "Transformation", rev: "Attachement, peur" },
+  { name: "Tempérance (XIV)", up: "Modération, alchimie", rev: "Excès, impatience" },
+  { name: "Le Diable (XV)", up: "Attachements, matérialisme", rev: "Libération" },
+  { name: "La Tour (XVI)", up: "Révélation, rupture", rev: "Retard du nécessaire" },
+  { name: "L’Étoile (XVII)", up: "Espoir, inspiration", rev: "Doute" },
+  { name: "La Lune (XVIII)", up: "Rêves, intuition", rev: "Confusion, peur" },
+  { name: "Le Soleil (XIX)", up: "Joie, clarté", rev: "Arrogance" },
+  { name: "Le Jugement (XX)", up: "Réveil, bilan", rev: "Auto-critique, hésitation" },
+  { name: "Le Monde (XXI)", up: "Accomplissement, unité", rev: "Boucle inachevée" },
 ];
 
+// util
 const shuffle = (arr) => {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
@@ -39,20 +48,20 @@ const shuffle = (arr) => {
   }
   return a;
 };
-
-// ajoute l'index image et ne met JAMAIS reversed
 const drawCards = (count) =>
-  shuffle(MAJOR_ARCANA.map((c, idx) => ({ ...c, idx, reversed: false })))
-    .slice(0, count);
+  shuffle(MAJOR_ARCANA)
+    .slice(0, count)
+    .map(c => ({ ...c, reversed: Math.random() < 0.48 }));
 
 export default function Home() {
+  // État stable côté serveur: aucun tirage (évite le mismatch), on affiche des placeholders
   const [mounted, setMounted] = useState(false);
   const [count, setCount] = useState(3);
-  const [cards, setCards] = useState([]);
+  const [cards, setCards] = useState([]); // vide pendant SSR
 
   useEffect(() => {
     setMounted(true);
-    setCards(drawCards(3));
+    setCards(drawCards(3)); // premier tirage côté client
   }, []);
 
   const onNewDraw = () => setCards(drawCards(count));
@@ -102,9 +111,10 @@ export default function Home() {
             <div className="space-x-[-40px] flex items-end">
               {previewCards.length > 0 ? (
                 previewCards.map((c, i) => (
-                  <TarotCard key={i} name={c.name} meaning={{up:c.up, rev:c.rev}} index={c.idx} />
+                  <TarotCard key={i} name={c.name} reversed={c.reversed} meaning={{up:c.up, rev:c.rev}} />
                 ))
               ) : (
+                // placeholders stables pour SSR
                 <>
                   <div className="w-44 h-60 bg-white/10 rounded-xl" />
                   <div className="w-44 h-60 bg-white/10 rounded-xl" />
@@ -121,7 +131,7 @@ export default function Home() {
           <div className={`grid gap-4 ${count===1?'grid-cols-1':'grid-cols-1 md:grid-cols-3'}`}>
             {mounted && cards.length > 0 ? (
               cards.slice(0, count).map((c, i) => (
-                <TarotCard key={i} name={c.name} meaning={{up:c.up, rev:c.rev}} index={c.idx} />
+                <TarotCard key={i} name={c.name} reversed={c.reversed} meaning={{up:c.up, rev:c.rev}} />
               ))
             ) : (
               Array.from({length: count}).map((_,i)=>(
@@ -134,3 +144,6 @@ export default function Home() {
     </div>
   )
 }
+JS
+
+echo "✅ Correctif écrit dans pages/index.js (backup dans .backup_tarot)"

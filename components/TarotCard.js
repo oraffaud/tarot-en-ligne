@@ -1,11 +1,17 @@
-            export default function TarotCard({ name }) {
+export default function TarotCard({ name, meaning, index }) {
+  const jpg = `/cards/${index}.jpg?v=upright1`;
+  const svg = `/cards/${index}.svg?v=upright1`;
   return (
     <div className="w-44 h-60 bg-white/10 rounded-xl shadow-lg flex items-center justify-center text-center p-3">
-      <div>
-        <div className="text-sm opacity-70">Arcana</div>
-        <div className="text-lg font-semibold mt-2">{name}</div>
-        <div className="text-xs opacity-60 mt-3">Signification brève...</div>
-      </div>
+      <img
+        src={jpg}
+        alt={name}
+        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = svg; }}
+        className="no-rotate w-full h-full object-contain rounded-lg"
+        style={{ transform: 'none', rotate: '0deg' }}
+        draggable={false}
+      />
+      <span className="sr-only">{name}</span>
     </div>
-  )
+  );
 }
