@@ -1,40 +1,10 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const PROD = process.env.NODE_ENV === 'production';
-  const { cards = [], question = '', lang = 'fr', consent = false } = req.body || {};
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: 'Missing OPENAI_API_KEY' });
-
-  if (process.env.DEMO_MODE === 'true') {
-    const spreadSize = Math.max(1, Math.min(5, cards.length));
-    const labelsFR = ["Contexte","Défi","Conseil","Influences","Issue"];
-    const labelsEN = ["Context","Challenge","Advice","Influences","Outcome"];
-    const L = lang === 'en' ? labelsEN : labelsFR;
-    const demo = {
-      overview: lang==='en' ? "Illustrative reading (demo mode)." : "Lecture illustrative (mode démo).",
-      positions: (cards||[]).slice(0,spreadSize).map((c,i)=>({
-        label: L[i] || `Carte ${i+1}`,
-        card: c?.name || `Carte ${i+1}`,
-        keyThemes: ["exemple","démo"],
-        opportunities: lang==='en' ? "Positive angle to explore." : "Piste positive à explorer.",
-        cautions: lang==='en' ? "Point of caution." : "Point de vigilance."
-      })),
-      synthesis: lang==='en' ? "Focus on alignment and steady steps." : "Focus sur l’alignement et des pas réguliers.",
-      actions_7days: lang==='en' ? ["write one intention","clarify one goal","small concrete step"] : ["noter une intention","clarifier un objectif","petit pas concret"],
-      tone: lang==='en' ? "balanced" : "équilibrée"
-    };
-    const pretty = [
-      demo.overview,
-      "",
-      ...demo.positions.map(p => `• ${p.label} — ${p.card}\n  Thèmes: ${(p.keyThemes||[]).join(', ')}\n  + ${p.opportunities}\n  ! ${p.cautions}`),
-      "",
-      `Synthèse: ${demo.synthesis}`,
-      `Actions (7 jours): ${(demo.actions_7days||[]).map(a=>`- ${a}`).join('\n')}`,
-      `Tonalité: ${demo.tone}`
-    ].join("\n");
-    return res.status(200).json({ parsed: demo, pretty });
-  }
+  const { cards = [], question = '', lang = 'fr' } = req.body || {};
+  const MODE = (process.env.AI_MODE || 'auto').toLowerCase(); // auto | live | demo
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const apiKey = process.env.OPENAI_API_KEY || '';
 
   const sys = lang === 'en'
     ? "You are a professional tarot reader. Produce a careful, ethical, structured analysis. NEVER give medical/financial/legal advice."
@@ -47,7 +17,6 @@ export default async function handler(req, res) {
     reversed: c?.rev || ''
   }));
 
-  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
   const userPrompt =
     `Cards: ${JSON.stringify(inputCards)}; Question: ${question || '(none)'}; ` +
     `Language: ${lang}; Spread: ${spreadSize}. ` +
@@ -63,44 +32,51 @@ export default async function handler(req, res) {
           { role: 'system', content: sys },
           { role: 'user', content: userPrompt }
         ],
-        text: { format: { type: "json_object" } },
+        text: { format: { type: 'json_object' } },
         temperature: 0.6
       })
     });
     if (!r.ok) throw new Error(`Responses API ${r.status}: ${await r.text()}`);
     const data = await r.json();
     const raw = data?.output?.[0]?.content?.[0]?.text ?? data?.output_text ?? null;
-    if (!raw) throw new Error('Responses API: sortie vide/non reconnue');
-    return raw;
+    if (!raw) throw new Error('Responses API: empty output');
+    return JSON.parse(raw);
   }
 
-  let raw;
-  try {
-    raw = await callResponses();
-  } catch (e1) {
-    return res.status(500).json({
-      error: 'AI request failed (Responses)',
-      ...(PROD ? {} : { detail: String(e1).slice(0,1000) })
-    });
+  function demoPayload() {
+    const L = lang === 'en'
+      ? ["Context","Challenge","Advice","Influences","Outcome"]
+      : ["Contexte","Défi","Conseil","Influences","Issue"];
+    const positions = (cards||[]).slice(0, spreadSize).map((c,i)=>({
+      label: L[i] || (lang==='en' ? `Card ${i+1}` : `Carte ${i+1}`),
+      card: c?.name || (lang==='en' ? `Card ${i+1}` : `Carte ${i+1}`),
+      keyThemes: ["example","demo"],
+      opportunities: lang==='en' ? "Positive angle to explore." : "Piste positive à explorer.",
+      cautions: lang==='en' ? "Point of caution." : "Point de vigilance."
+    }));
+    return {
+      overview: lang==='en' ? "Illustrative reading (demo mode)." : "Lecture illustrative (mode démo).",
+      positions,
+      synthesis: lang==='en' ? "Focus on alignment and steady steps." : "Focus sur l’alignement et des pas réguliers.",
+      actions_7days: lang==='en'
+        ? ["write one intention","clarify one goal","small concrete step"]
+        : ["noter une intention","clarifier un objectif","petit pas concret"],
+      tone: lang==='en' ? "balanced" : "équilibrée"
+    };
   }
 
-  let parsed;
-  try { parsed = JSON.parse(raw); }
-  catch {
-    parsed = { overview: raw, positions: [], synthesis: "", actions_7days: [], tone: "" };
+  async function compute() {
+    if (MODE === 'demo') return { parsed: demoPayload(), meta: { mode: 'demo' } };
+    if (MODE === 'live') {
+      if (!apiKey) throw new Error('LIVE mode: missing OPENAI_API_KEY');
+      const parsed = await callResponses(); return { parsed, meta: { mode: 'live' } };
+    }
+    if (!apiKey) return { parsed: demoPayload(), meta: { mode: 'demo', reason: 'no_api_key' } };
+    try { const parsed = await callResponses(); return { parsed, meta: { mode: 'live' } };
+    } catch (e) { return { parsed: demoPayload(), meta: { mode: 'demo', reason: String(e).slice(0,400) } }; }
   }
 
-  if (consent && process.env.LOG_TO_DISK !== 'false') {
-    try {
-      const fs = await import('fs');
-      const line = JSON.stringify({
-        ts: new Date().toISOString(),
-        lang, question, cards: inputCards, model, parsed
-      }) + '\n';
-      fs.appendFileSync('data/premium_logs.jsonl', line, 'utf8');
-    } catch {}
-  }
-
+  const { parsed, meta } = await compute();
   const pretty = [
     parsed.overview ?? '',
     '',
@@ -108,8 +84,9 @@ export default async function handler(req, res) {
     '',
     `Synthèse: ${parsed.synthesis || ''}`,
     `Actions (7 jours): ${(parsed.actions_7days||[]).map(a=>`- ${a}`).join('\n')}`,
-    `Tonalité: ${parsed.tone || ''}`
+    `Tonalité: ${parsed.tone || ''}`,
+    meta?.mode ? `\n[mode=${meta.mode}${meta.reason ? `, reason=${meta.reason}`:''}]` : ''
   ].join('\n');
 
-  return res.status(200).json({ parsed, pretty });
+  return res.status(200).json({ parsed, pretty, meta });
 }
