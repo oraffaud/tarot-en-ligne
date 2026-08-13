@@ -5,6 +5,7 @@ import Header from '../components/Header'
 import TarotCard from '../components/TarotCard'
 import TarotChat from '../components/TarotChat'
 
+import LiveChatPromo from '../components/LiveChatPromo'
 const PAYMENT_LINK = process.env.NEXT_PUBLIC_PAYMENT_LINK_URL || '#'
 
 const MAJOR_ARCANA = [
@@ -149,7 +150,8 @@ export default function Home() {
         </section>
 
         <TarotChat cards={cards} spreadSize={count} lang={lang} />
-      </main>
+        <LiveChatPromo />
+</main>
     </div>
   )
 }
