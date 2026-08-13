@@ -3,35 +3,12 @@ import { useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import Header from '../components/Header'
 import TarotCard from '../components/TarotCard'
+import { MAJOR_ARCANA } from '../lib/marseilleDeck'
 import TarotChat from '../components/TarotChat'
 
 import LiveChatPromo from '../components/LiveChatPromo'
 const PAYMENT_LINK = process.env.NEXT_PUBLIC_PAYMENT_LINK_URL || '#'
 
-const MAJOR_ARCANA = [
-  { name: "Le Mat (0)", up: "Nouveaux départs, foi", rev: "Imprudence, naïveté" },
-  { name: "Le Magicien (I)", up: "Volonté, ressources", rev: "Manipulation, illusions" },
-  { name: "La Papesse (II)", up: "Intuition, mystère", rev: "Secrets, blocage" },
-  { name: "L’Impératrice (III)", up: "Abondance, soin", rev: "Dépendance, stagnation" },
-  { name: "L’Empereur (IV)", up: "Structure, autorité", rev: "Rigidité, domination" },
-  { name: "Le Pape (V)", up: "Tradition, guidance", rev: "Dogmatisme, rébellion" },
-  { name: "Les Amoureux (VI)", up: "Choix, harmonie", rev: "Dissonance, doute" },
-  { name: "Le Chariot (VII)", up: "Volonté, progrès", rev: "Dispersion, indécision" },
-  { name: "La Force (VIII)", up: "Courage, maîtrise", rev: "Insécurité, impulsivité" },
-  { name: "L’Hermite (IX)", up: "Recherche, sagesse", rev: "Isolement, fuite" },
-  { name: "La Roue de Fortune (X)", up: "Cycles, tournant", rev: "Résistance au changement" },
-  { name: "La Justice (XI)", up: "Équité, vérité", rev: "Injustice, déséquilibre" },
-  { name: "Le Pendu (XII)", up: "Lâcher-prise, regard neuf", rev: "Blocage, stagnation" },
-  { name: "La Mort (XIII)", up: "Transformation", rev: "Attachement, peur" },
-  { name: "Tempérance (XIV)", up: "Modération, alchimie", rev: "Excès, impatience" },
-  { name: "Le Diable (XV)", up: "Attachements, matérialisme", rev: "Libération" },
-  { name: "La Tour (XVI)", up: "Révélation, rupture", rev: "Retard du nécessaire" },
-  { name: "L’Étoile (XVII)", up: "Espoir, inspiration", rev: "Doute" },
-  { name: "La Lune (XVIII)", up: "Rêves, intuition", rev: "Confusion, peur" },
-  { name: "Le Soleil (XIX)", up: "Joie, clarté", rev: "Arrogance" },
-  { name: "Le Jugement (XX)", up: "Réveil, bilan", rev: "Auto-critique, hésitation" },
-  { name: "Le Monde (XXI)", up: "Accomplissement, unité", rev: "Boucle inachevée" },
-];
 
 const shuffle = (arr) => {
   const a = [...arr];

@@ -100,8 +100,8 @@ export default function TarotChat({ cards = [], spreadSize = 3, lang = 'fr' }) {
     // Tonalité en fonction des cartes tirées
     const names = (cards || []).map(c => (c?.name || "").toLowerCase());
     const hasSun = names.some(n => n.includes("soleil") || n.includes("sun"));
-    const hasTower = names.some(n => n.includes("tour") || n.includes("tower"));
-    const hasDeath = names.some(n => n.includes("mort") || n.includes("death"));
+    const hasTower = names.some(n => n.includes("maison dieu") || n.includes("tour") || n.includes("tower"));
+    const hasDeath = names.some(n => n.includes("arcane sans nom") || n.includes("mort") || n.includes("death"));
     const hasStar = names.some(n => n.includes("étoile") || n.includes("star"));
     const hasDevil = names.some(n => n.includes("diable") || n.includes("devil"));
     const hasJustice = names.some(n => n.includes("justice"));
