@@ -11,6 +11,8 @@ export default function AdminChat() {
   const [body,setBody]=useState('')
   const [notice,setNotice]=useState('')
   const [loading,setLoading]=useState(true)
+  const [autoTranslate,setAutoTranslate]=useState(true)
+  const [translating,setTranslating]=useState({})
   const user=session?.user
 
   useEffect(()=>{
@@ -54,7 +56,25 @@ export default function AdminChat() {
   async function open(c){
     setActive(c)
     const {data,error}=await supabase.from('messages').select('*').eq('conversation_id',c.id).order('created_at',{ascending:true})
-    if(error)setNotice(error.message); else setMessages(data||[])
+    if(error)setNotice(error.message); else {
+      const rows=data||[]; setMessages(rows)
+      if(autoTranslate) translateMissing(rows)
+    }
+  }
+
+  async function translateMissing(rows){
+    for(const m of rows){
+      if(m.sender_id===user.id || m.detected_language || translating[m.id]) continue
+      setTranslating(v=>({...v,[m.id]:true}))
+      try{
+        const r=await fetch('/api/admin/translate-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:m.body})})
+        if(!r.ok) continue
+        const t=await r.json()
+        await supabase.rpc('cache_message_translation',{p_message_id:m.id,p_detected_language:t.language,p_translated_body_fr:t.translation})
+        setMessages(v=>v.map(x=>x.id===m.id?{...x,detected_language:t.language,translated_body_fr:t.translation}:x))
+      }catch(e){ console.error(e) }
+      finally{ setTranslating(v=>({...v,[m.id]:false})) }
+    }
   }
 
   async function send(e){
@@ -71,7 +91,7 @@ export default function AdminChat() {
 
   if(role && role!=='owner')return <main style={page}><div style={card}><h1>Accès refusé</h1><p>Ce compte n’est pas autorisé à accéder à l’espace propriétaire.</p><button onClick={logout} style={button}>Se déconnecter</button>{notice&&<p>{notice}</p>}</div></main>
 
-  return <main style={page}><div style={{...card,maxWidth:1100}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}><div><h1 style={{marginBottom:6}}>Conversations Premium</h1><p style={{opacity:.7,marginTop:0}}>Espace propriétaire sécurisé.</p></div><button onClick={logout} style={{...button,background:'rgba(255,255,255,.12)',color:'#fff'}}>Se déconnecter</button></div><div style={{display:'grid',gridTemplateColumns:'minmax(220px,1fr) 2fr',gap:18}}><aside>{items.length===0?<p>Aucune conversation attribuée.</p>:items.map(c=><button key={c.id} onClick={()=>open(c)} style={{display:'block',width:'100%',padding:12,marginBottom:8,textAlign:'left',borderRadius:10,border:'1px solid rgba(255,255,255,.15)',background:'rgba(255,255,255,.06)',color:'#fff'}}>{c.subject||'Chat Premium'}<br/><small>{c.status}</small></button>)}</aside><section>{active?<><h2>{active.subject||'Chat Premium'}</h2><div style={thread}>{messages.map(m=><div key={m.id} style={{...bubble,marginLeft:m.sender_id===user.id?'auto':0}}>{m.body}</div>)}</div><form onSubmit={send} style={{display:'flex',gap:8}}><input value={body} onChange={e=>setBody(e.target.value)} maxLength={4000} style={{...input,margin:0,flex:1}}/><button style={button}>Envoyer</button></form></>:<p>Sélectionnez une conversation.</p>}</section></div>{notice&&<p>{notice}</p>}</div></main>
+  return <main style={page}><div style={{...card,maxWidth:1100}}><div style={{display:'flex',justifyContent:'space-between',alignItems:'center',gap:12}}><div><h1 style={{marginBottom:6}}>Conversations Premium</h1><p style={{opacity:.7,marginTop:0}}>Espace propriétaire sécurisé.</p><label style={{display:'flex',alignItems:'center',gap:8,fontSize:13,opacity:.85}}><input type="checkbox" checked={autoTranslate} onChange={e=>setAutoTranslate(e.target.checked)}/>Traductions automatiques vers le français</label></div><button onClick={logout} style={{...button,background:'rgba(255,255,255,.12)',color:'#fff'}}>Se déconnecter</button></div><div style={{display:'grid',gridTemplateColumns:'minmax(220px,1fr) 2fr',gap:18}}><aside>{items.length===0?<p>Aucune conversation attribuée.</p>:items.map(c=><button key={c.id} onClick={()=>open(c)} style={{display:'block',width:'100%',padding:12,marginBottom:8,textAlign:'left',borderRadius:10,border:'1px solid rgba(255,255,255,.15)',background:'rgba(255,255,255,.06)',color:'#fff'}}>{c.subject||'Chat Premium'}<br/><small>{c.status}</small></button>)}</aside><section>{active?<><h2>{active.subject||'Chat Premium'}</h2><div style={thread}>{messages.map(m=>{const mine=m.sender_id===user.id;return <div key={m.id} style={{...bubble,marginLeft:mine?'auto':0}}><div style={{fontSize:11,opacity:.62,marginBottom:5,textTransform:'uppercase'}}>{mine?'Nanou':'Client'}{!mine&&m.detected_language&&m.detected_language!=='fr'?` · original ${m.detected_language.toUpperCase()}`:''}</div><div>{m.body}</div>{!mine&&translating[m.id]&&<div style={{...translation,opacity:.65}}>Traduction en cours…</div>}{!mine&&m.translated_body_fr&&<div style={translation}><div style={{fontSize:11,opacity:.68,marginBottom:5,textTransform:'uppercase'}}>Traduction automatique · Français</div>{m.translated_body_fr}</div>}</div>})}</div><form onSubmit={send} style={{display:'flex',gap:8}}><input value={body} onChange={e=>setBody(e.target.value)} maxLength={4000} style={{...input,margin:0,flex:1}}/><button style={button}>Envoyer</button></form></>:<p>Sélectionnez une conversation.</p>}</section></div>{notice&&<p>{notice}</p>}</div></main>
 }
 
 const page={minHeight:'100vh',padding:'40px 18px',background:'#171321',color:'#fff',fontFamily:'system-ui,sans-serif'}
@@ -80,3 +100,5 @@ const input={padding:'12px 14px',borderRadius:10,border:'1px solid rgba(255,255,
 const button={padding:'12px 16px',border:0,borderRadius:10,fontWeight:700,cursor:'pointer'}
 const thread={height:420,overflowY:'auto',padding:'12px 0',marginBottom:12,borderTop:'1px solid rgba(255,255,255,.12)',borderBottom:'1px solid rgba(255,255,255,.12)'}
 const bubble={maxWidth:'78%',padding:'10px 12px',borderRadius:12,marginBottom:8,background:'rgba(255,255,255,.1)',whiteSpace:'pre-wrap'}
+
+const translation={marginTop:10,padding:'10px 12px',borderRadius:10,background:'rgba(232,214,255,.10)',borderLeft:'2px solid rgba(232,214,255,.42)',whiteSpace:'pre-wrap'}
