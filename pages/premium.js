@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/router'
 import Header from '../components/Header'
 import TarotCard from '../components/TarotCard'
 import { MAJOR_ARCANA } from '../lib/marseilleDeck'
@@ -50,6 +51,7 @@ function Stepper({ step, lang }) {
 }
 
 export default function Premium() {
+  const router = useRouter()
   const [step, setStep] = useState(1)
   const [question, setQuestion] = useState('')
   const [count, setCount] = useState(3)
@@ -61,6 +63,14 @@ export default function Premium() {
   const [error, setError] = useState('')
 
   const reading = result?.parsed
+
+  useEffect(() => {
+    if (!router.isReady) return
+    const incomingQuestion = typeof router.query.question === 'string' ? router.query.question : ''
+    const incomingLang = router.query.lang === 'en' ? 'en' : 'fr'
+    if (incomingQuestion && !question) setQuestion(incomingQuestion)
+    setLang(incomingLang)
+  }, [router.isReady])
 
   function continueFromQuestion() {
     if (!question.trim()) {
