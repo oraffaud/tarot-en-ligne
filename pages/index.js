@@ -81,14 +81,35 @@ export default function Home() {
     setError('')
   }
 
-  function goPremium() {
-    const params = new URLSearchParams({
-      question: question.trim(),
-      lang,
-      count: String(count)
-    })
-    cards.forEach((c, i) => params.set(`card${i + 1}`, c.name))
-    router.push(`/premium?${params.toString()}`)
+  async function goPremium() {
+    try {
+      const context = {
+        question: question.trim(),
+        lang,
+        count,
+        cards: cards.map(c => ({
+          name: c.name,
+          up: c.up,
+          rev: c.rev,
+          idx: c.idx
+        }))
+      }
+      window.localStorage.setItem('nanou_premium_context', JSON.stringify(context))
+
+      const r = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      })
+
+      if (!r.ok) throw new Error('Checkout unavailable')
+      const data = await r.json()
+      if (!data.url) throw new Error('Missing checkout URL')
+      window.location.href = data.url
+    } catch (e) {
+      setError(lang === 'en'
+        ? 'Payment could not be opened. Please try again.'
+        : 'Le paiement n’a pas pu être ouvert. Merci de réessayer.')
+    }
   }
 
   return (
@@ -405,13 +426,13 @@ export default function Home() {
                 onClick={goPremium}
                 className="mt-8 bg-amber-200 hover:bg-amber-100 text-violet-950 px-9 py-4 rounded-full font-semibold shadow-lg transition text-lg"
               >
-                {lang === 'en' ? 'Reveal my complete reading ✦' : 'Révéler ma lecture complète ✦'}
+                {lang === 'en' ? 'Unlock my complete reading · €19 ✦' : 'Débloquer ma lecture complète · 19 € ✦'}
               </button>
 
               <p className="mt-4 text-sm text-violet-400">
                 {lang === 'en'
-                  ? 'Your question and your spread will follow you into the Premium experience.'
-                  : 'Votre question et votre tirage vous accompagnent vers l’expérience Premium.'}
+                  ? 'Secure payment by Stripe. Your question and spread are preserved.'
+                  : 'Paiement sécurisé par Stripe. Votre question et votre tirage sont conservés.'}
               </p>
             </div>
 

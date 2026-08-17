@@ -62,15 +62,51 @@ export default function Premium() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
+  const [accessChecked, setAccessChecked] = useState(false)
+  const [premiumPaid, setPremiumPaid] = useState(false)
 
   const reading = result?.parsed
 
   useEffect(() => {
     if (!router.isReady) return
-    const incomingQuestion = typeof router.query.question === 'string' ? router.query.question : ''
-    const incomingLang = router.query.lang === 'en' ? 'en' : 'fr'
-    if (incomingQuestion && !question) setQuestion(incomingQuestion)
-    setLang(incomingLang)
+
+    const sessionId = typeof router.query.session_id === 'string'
+      ? router.query.session_id
+      : window.localStorage.getItem('nanou_paid_session_id')
+
+    const saved = window.localStorage.getItem('nanou_premium_context')
+    if (saved) {
+      try {
+        const ctx = JSON.parse(saved)
+        if (ctx.question) setQuestion(ctx.question)
+        if (ctx.lang === 'en') setLang('en')
+        if ([1,3,5].includes(ctx.count)) setCount(ctx.count)
+        if (Array.isArray(ctx.cards) && ctx.cards.length) {
+          setCards(ctx.cards)
+          setDrawnCount(ctx.cards.length)
+        }
+      } catch {}
+    }
+
+    if (!sessionId) {
+      setPremiumPaid(false)
+      setAccessChecked(true)
+      return
+    }
+
+    fetch(`/api/stripe/verify-checkout?session_id=${encodeURIComponent(sessionId)}`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.paid) {
+          setPremiumPaid(true)
+          window.localStorage.setItem('nanou_paid_session_id', sessionId)
+          if (saved) setStep(3)
+        } else {
+          setPremiumPaid(false)
+        }
+      })
+      .catch(() => setPremiumPaid(false))
+      .finally(() => setAccessChecked(true))
   }, [router.isReady])
 
   function continueFromQuestion() {
@@ -139,6 +175,48 @@ export default function Premium() {
     setDrawnCount(0)
     setResult(null)
     setError('')
+  }
+
+  if (!accessChecked) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#1a1022] via-[#2b1739] to-[#120b18] text-white">
+        <Header />
+        <main className="max-w-3xl mx-auto px-6 py-24 text-center">
+          <div className="text-3xl">☾ ✦ ☽</div>
+          <h1 className="text-3xl font-serif mt-5">Validation de votre accès Premium…</h1>
+        </main>
+      </div>
+    )
+  }
+
+  if (!premiumPaid) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-[#1a1022] via-[#2b1739] to-[#120b18] text-white">
+        <Header />
+        <main className="max-w-3xl mx-auto px-6 py-20 text-center">
+          <div className="text-3xl">☾ ✦ ☽</div>
+          <div className="text-xs uppercase tracking-[0.28em] text-amber-100/70 mt-4">Lecture Premium</div>
+          <h1 className="text-4xl md:text-5xl font-serif mt-4">Votre lecture complète vous attend</h1>
+          <p className="mt-5 text-violet-200 leading-8">
+            La lecture Premium est accessible après règlement sécurisé de 19 €.
+            Votre question et votre tirage sont conservés.
+          </p>
+          <button
+            onClick={async () => {
+              try {
+                const r = await fetch('/api/stripe/create-checkout', { method: 'POST' })
+                const data = await r.json()
+                if (data.url) window.location.href = data.url
+              } catch {}
+            }}
+            className="mt-8 bg-amber-200 hover:bg-amber-100 text-violet-950 px-8 py-4 rounded-full font-semibold shadow-lg"
+          >
+            Débloquer ma lecture · 19 € ✦
+          </button>
+          <p className="mt-4 text-sm text-violet-400">Paiement sécurisé par Stripe</p>
+        </main>
+      </div>
+    )
   }
 
   return (
