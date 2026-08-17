@@ -60,11 +60,13 @@ export default function Home() {
       return
     }
     setError('')
+    setCard(null)
     setStep(2)
-    setTimeout(() => {
-      setCard(drawOne())
-      setStep(3)
-    }, 900)
+  }
+
+  function drawCardFromDeck() {
+    setCard(drawOne())
+    setStep(3)
   }
 
   function restart() {
@@ -158,16 +160,54 @@ export default function Home() {
         )}
 
         {step === 2 && (
-          <section className="max-w-3xl mx-auto text-center pt-20 md:pt-28">
-            <div className="text-4xl animate-pulse">✦</div>
-            <h2 className="text-3xl md:text-4xl font-serif mt-6">
-              {lang === 'en' ? 'The cards are listening…' : 'Les cartes vous écoutent…'}
+          <section className="max-w-3xl mx-auto text-center pt-14 md:pt-20">
+            <div className="text-xs uppercase tracking-[0.28em] text-amber-100/65">
+              {lang === 'en' ? 'The intention is set' : 'L’intention est posée'}
+            </div>
+
+            <h2 className="text-3xl md:text-5xl font-serif mt-4">
+              {lang === 'en' ? 'Draw your card' : 'Tirez votre carte'}
             </h2>
-            <p className="mt-4 text-violet-200 leading-8">
+
+            <p className="mt-4 max-w-2xl mx-auto text-violet-200 leading-8">
               {lang === 'en'
-                ? 'Keep your question in mind for a moment.'
-                : 'Gardez votre question à l’esprit quelques instants.'}
+                ? 'Keep your question in mind. When you feel ready, touch the deck and let one card come forward.'
+                : 'Gardez votre question à l’esprit. Lorsque vous vous sentez prêt, touchez le jeu et laissez une carte venir à votre rencontre.'}
             </p>
+
+            <div className="mt-8 max-w-2xl mx-auto rounded-2xl bg-black/15 border border-white/10 px-5 py-4">
+              <div className="text-xs uppercase tracking-[0.16em] text-violet-300">
+                {lang === 'en' ? 'Your question' : 'Votre question'}
+              </div>
+              <p className="mt-2 italic text-violet-50 leading-7">« {question} »</p>
+            </div>
+
+            <div className="mt-10 flex flex-col items-center">
+              <button
+                onClick={drawCardFromDeck}
+                className="free-tarot-deck"
+                aria-label={lang === 'en' ? 'Draw my card' : 'Tirer ma carte'}
+              >
+                <span className="free-deck-shadow free-deck-shadow-1" />
+                <span className="free-deck-shadow free-deck-shadow-2" />
+                <span className="free-deck-face">
+                  <span className="free-deck-moon">☾</span>
+                  <span className="free-deck-star">✦</span>
+                  <span className="free-deck-moon free-deck-moon-right">☽</span>
+                </span>
+              </button>
+
+              <div className="mt-5 text-sm uppercase tracking-[0.16em] text-amber-100/70">
+                {lang === 'en' ? 'Touch the deck' : 'Touchez le jeu'}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setStep(1)}
+              className="mt-8 text-sm underline text-violet-400"
+            >
+              {lang === 'en' ? 'Change my question' : 'Modifier ma question'}
+            </button>
           </section>
         )}
 
@@ -272,8 +312,86 @@ export default function Home() {
 
       <style jsx global>{`
         @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(14px) scale(.98); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
+          from { opacity: 0; transform: translateY(-18px) rotateY(85deg) scale(.94); }
+          60% { opacity: 1; transform: translateY(4px) rotateY(12deg) scale(1.02); }
+          to { opacity: 1; transform: translateY(0) rotateY(0) scale(1); }
+        }
+
+        .free-tarot-deck {
+          position: relative;
+          width: 168px;
+          height: 258px;
+          border: 0;
+          padding: 0;
+          background: transparent;
+          cursor: pointer;
+          filter: drop-shadow(0 22px 28px rgba(0,0,0,.42));
+          transition: transform .25s ease, filter .25s ease;
+        }
+
+        .free-tarot-deck:hover {
+          transform: translateY(-5px) scale(1.025);
+          filter: drop-shadow(0 28px 32px rgba(0,0,0,.48));
+        }
+
+        .free-tarot-deck:active {
+          transform: translateY(2px) scale(.985);
+        }
+
+        .free-deck-shadow,
+        .free-deck-face {
+          position: absolute;
+          inset: 0;
+          border-radius: 16px;
+        }
+
+        .free-deck-shadow {
+          background: #281538;
+          border: 1px solid rgba(255,240,205,.22);
+        }
+
+        .free-deck-shadow-1 {
+          transform: translate(9px, 8px) rotate(2.2deg);
+          opacity: .70;
+        }
+
+        .free-deck-shadow-2 {
+          transform: translate(5px, 4px) rotate(1deg);
+          opacity: .86;
+        }
+
+        .free-deck-face {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #f0dca6;
+          background:
+            radial-gradient(circle at center, rgba(245,216,153,.15) 0 20%, transparent 21%),
+            repeating-radial-gradient(circle at center, transparent 0 12px, rgba(245,216,153,.08) 13px 14px),
+            linear-gradient(145deg, #3b1d50, #1b1026);
+          border: 2px solid rgba(245,216,153,.58);
+          box-shadow: inset 0 0 0 8px rgba(20,8,28,.62);
+          overflow: hidden;
+        }
+
+        .free-deck-star {
+          font-size: 54px;
+          text-shadow: 0 0 22px rgba(240,220,166,.38);
+        }
+
+        .free-deck-moon {
+          position: absolute;
+          top: 30px;
+          left: 24px;
+          font-size: 25px;
+          opacity: .82;
+        }
+
+        .free-deck-moon-right {
+          top: auto;
+          left: auto;
+          right: 24px;
+          bottom: 30px;
         }
       `}</style>
     </div>
