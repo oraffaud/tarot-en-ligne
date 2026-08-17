@@ -16,7 +16,7 @@ const shuffle = (arr) => {
   return a
 }
 
-const drawCards = (count) => shuffle(MAJOR_ARCANA.map((c, idx) => ({ ...c, idx }))).slice(0, count)
+const buildDeck = () => shuffle(MAJOR_ARCANA.map((c, idx) => ({ ...c, idx })))
 
 function labels(count, lang) {
   if (count === 1) return lang === 'en' ? ['Essential message'] : ['Message essentiel']
@@ -37,6 +37,7 @@ export default function Home() {
   const [question, setQuestion] = useState('')
   const [count, setCount] = useState(3)
   const [cards, setCards] = useState([])
+  const [deck, setDeck] = useState([])
   const [drawnCount, setDrawnCount] = useState(0)
   const [step, setStep] = useState(1)
   const [error, setError] = useState('')
@@ -52,17 +53,23 @@ export default function Home() {
   }
 
   const startSpread = () => {
-    setCards(drawCards(count))
+    setDeck(buildDeck())
+    setCards([])
     setDrawnCount(0)
     setStep(3)
   }
 
-  const drawNext = () => setDrawnCount(v => Math.min(v + 1, count))
+  const chooseCard = (card) => {
+    if (drawnCount >= count || cards.some(c => c.idx === card.idx)) return
+    setCards(prev => [...prev, card])
+    setDrawnCount(v => Math.min(v + 1, count))
+  }
 
   const restart = () => {
     setQuestion('')
     setCount(3)
     setCards([])
+    setDeck([])
     setDrawnCount(0)
     setStep(1)
     setError('')
@@ -119,15 +126,15 @@ export default function Home() {
         )}
 
         {step === 3 && (
-          <section className="max-w-4xl mx-auto rounded-[28px] bg-white/[0.055] border border-white/10 p-7 md:p-10 shadow-2xl mt-12">
-            <div className="text-center"><div className="text-xs uppercase tracking-[0.25em] text-amber-100/65">{lang==='en'?'The ritual begins':'Le rituel commence'}</div><h2 className="text-2xl md:text-4xl font-serif mt-3">{drawnCount<count?(lang==='en'?'Draw the cards yourself':'Tirez vous-même les cartes'):(lang==='en'?'Your spread is set':'Votre tirage est posé')}</h2><p className="mt-4 text-violet-200 leading-7 max-w-2xl mx-auto">{drawnCount<count?(lang==='en'?'Keep your question in mind. Touch the deck each time you feel ready.':'Gardez votre question à l’esprit. Touchez le jeu chaque fois que vous vous sentez prêt.'):(lang==='en'?'The cards have taken their place. Observe them before discovering the first message.':'Les cartes ont trouvé leur place. Observez-les avant de découvrir leur premier message.')}</p></div>
+          <section className="max-w-5xl mx-auto rounded-[28px] bg-white/[0.055] border border-white/10 p-5 md:p-9 shadow-2xl mt-12">
+            <div className="text-center"><div className="text-xs uppercase tracking-[0.25em] text-amber-100/65">{lang==='en'?'The ritual begins':'Le rituel commence'}</div><h2 className="text-2xl md:text-4xl font-serif mt-3">{drawnCount<count?(lang==='en'?'Choose your cards from the spread':'Choisissez vos cartes dans le jeu étalé'):(lang==='en'?'Your spread is set':'Votre tirage est posé')}</h2><p className="mt-4 text-violet-200 leading-7 max-w-2xl mx-auto">{drawnCount<count?(lang==='en'?`All 22 Major Arcana are laid out before you. Keep your question in mind and choose card ${drawnCount+1} of ${count}.`:`Les 22 arcanes majeurs sont étalés devant vous. Gardez votre question à l’esprit et choisissez la carte ${drawnCount+1} sur ${count}.`):(lang==='en'?'The cards have taken their place. Observe them before discovering the first message.':'Les cartes ont trouvé leur place. Observez-les avant de découvrir leur premier message.')}</p></div>
 
-            {drawnCount<count && <div className="mt-9 flex flex-col items-center"><button onClick={drawNext} className="free-tarot-deck" aria-label={lang==='en'?'Draw the next card':'Tirer la carte suivante'}><span className="free-deck-shadow free-deck-shadow-1"/><span className="free-deck-shadow free-deck-shadow-2"/><span className="free-deck-face"><span className="free-deck-moon">☾</span><span className="free-deck-star">✦</span><span className="free-deck-moon free-deck-moon-right">☽</span></span></button><div className="mt-5 text-sm uppercase tracking-[0.16em] text-amber-100/70">{lang==='en'?`Card ${drawnCount+1} of ${count}`:`Carte ${drawnCount+1} sur ${count}`}</div><div className="mt-2 text-violet-300 text-sm">{lang==='en'?'Touch the deck':'Touchez le jeu'}</div></div>}
+            {drawnCount<count && <div className="mt-8"><div className="tarot-table" role="group" aria-label={lang==='en'?'22 Major Arcana laid out':'22 arcanes majeurs étalés'}>{deck.map((c,i)=>{const selected=cards.some(card=>card.idx===c.idx);return <button key={`${c.idx}-${i}`} disabled={selected} onClick={()=>chooseCard(c)} className={`spread-card-back ${selected?'spread-card-selected':''}`} aria-label={selected?(lang==='en'?'Card already selected':'Carte déjà sélectionnée'):(lang==='en'?`Choose card ${i+1}`:`Choisir la carte ${i+1}`)}><span className="spread-inner"><span className="spread-moon">☾</span><span className="spread-star">✦</span><span className="spread-moon spread-moon-right">☽</span></span>{selected && <span className="spread-check">✓</span>}</button>})}</div><div className="mt-5 text-center text-sm uppercase tracking-[0.16em] text-amber-100/70">{lang==='en'?`${drawnCount} of ${count} selected`:`${drawnCount} carte${drawnCount>1?'s':''} sur ${count} sélectionnée${drawnCount>1?'s':''}`}</div></div>}
 
             {drawnCount>0 && (count===5 ? (
-              <div className="tarot-cross mt-9 mx-auto">{cards.slice(0,drawnCount).map((c,i)=>{const pos=['cross-left','cross-right','cross-top','cross-bottom','cross-center'];return <div key={`${c.name}-${i}`} className={`cross-card ${pos[i]}`}><div className="cross-label">{i+1} · {spreadLabels[i]}</div><TarotCard name={c.name} meaning={{up:c.up,rev:c.rev}} index={c.idx}/></div>})}</div>
+              <div className="tarot-cross mt-9 mx-auto">{cards.map((c,i)=>{const pos=['cross-left','cross-right','cross-top','cross-bottom','cross-center'];return <div key={`${c.name}-${i}`} className={`cross-card ${pos[i]}`}><div className="cross-label">{i+1} · {spreadLabels[i]}</div><TarotCard name={c.name} meaning={{up:c.up,rev:c.rev}} index={c.idx}/></div>})}</div>
             ) : (
-              <div className={`mt-9 grid gap-6 ${count===1?'grid-cols-1 max-w-xs mx-auto':'grid-cols-3 max-w-3xl mx-auto'}`}>{cards.slice(0,drawnCount).map((c,i)=><div key={`${c.name}-${i}`} className="flex flex-col items-center"><div className="cross-label mb-2">{i+1} · {spreadLabels[i]}</div><TarotCard name={c.name} meaning={{up:c.up,rev:c.rev}} index={c.idx}/></div>)}</div>
+              <div className={`mt-9 grid gap-6 ${count===1?'grid-cols-1 max-w-xs mx-auto':'grid-cols-1 sm:grid-cols-3 max-w-3xl mx-auto'}`}>{cards.map((c,i)=><div key={`${c.name}-${i}`} className="flex flex-col items-center"><div className="cross-label mb-2">{i+1} · {spreadLabels[i]}</div><TarotCard name={c.name} meaning={{up:c.up,rev:c.rev}} index={c.idx}/></div>)}</div>
             ))}
 
             {drawnCount===count && <div className="mt-10 text-center"><button onClick={() => setStep(4)} className="bg-amber-200 hover:bg-amber-100 text-violet-950 px-8 py-3.5 rounded-full font-semibold shadow-lg transition">{lang==='en'?'Discover the first message ✦':'Découvrir le premier message ✦'}</button></div>}
@@ -154,7 +161,7 @@ export default function Home() {
       </main>
 
       <style jsx global>{`
-        .free-tarot-deck{position:relative;width:168px;height:258px;border:0;padding:0;background:transparent;cursor:pointer;filter:drop-shadow(0 22px 28px rgba(0,0,0,.42));transition:transform .25s ease}.free-tarot-deck:hover{transform:translateY(-5px) scale(1.025)}.free-deck-shadow,.free-deck-face{position:absolute;inset:0;border-radius:16px}.free-deck-shadow{background:#281538;border:1px solid rgba(255,240,205,.22)}.free-deck-shadow-1{transform:translate(9px,8px) rotate(2.2deg);opacity:.7}.free-deck-shadow-2{transform:translate(5px,4px) rotate(1deg);opacity:.86}.free-deck-face{display:flex;align-items:center;justify-content:center;color:#f0dca6;background:radial-gradient(circle at center,rgba(245,216,153,.15) 0 20%,transparent 21%),linear-gradient(145deg,#3b1d50,#1b1026);border:2px solid rgba(245,216,153,.58);box-shadow:inset 0 0 0 8px rgba(20,8,28,.62)}.free-deck-star{font-size:54px}.free-deck-moon{position:absolute;top:30px;left:24px;font-size:25px}.free-deck-moon-right{top:auto;left:auto;right:24px;bottom:30px}.tarot-cross{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,auto);align-items:center;justify-items:center;width:100%;max-width:760px;gap:10px}.cross-card{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}.cross-left{grid-column:1;grid-row:2}.cross-right{grid-column:3;grid-row:2}.cross-top{grid-column:2;grid-row:1}.cross-bottom{grid-column:2;grid-row:3}.cross-center{grid-column:2;grid-row:2}.cross-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(245,230,255,.65);white-space:nowrap}
+        .tarot-table{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:10px;max-width:920px;margin:0 auto;align-items:center}.spread-card-back{position:relative;aspect-ratio:2/3;border:0;padding:0;background:transparent;cursor:pointer;transition:transform .18s ease,opacity .18s ease;filter:drop-shadow(0 8px 10px rgba(0,0,0,.35))}.spread-card-back:hover:not(:disabled){transform:translateY(-7px) scale(1.06);z-index:2}.spread-inner{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#efd99d;background:radial-gradient(circle at center,rgba(245,216,153,.15) 0 18%,transparent 19%),linear-gradient(145deg,#3b1d50,#1b1026);border:1px solid rgba(245,216,153,.55);border-radius:8px;box-shadow:inset 0 0 0 4px rgba(20,8,28,.62)}.spread-star{font-size:17px}.spread-moon{position:absolute;top:7px;left:7px;font-size:10px}.spread-moon-right{top:auto;left:auto;right:7px;bottom:7px}.spread-card-selected{opacity:.28;cursor:default;transform:translateY(3px)}.spread-check{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;font-size:22px;font-weight:700;z-index:3}.tarot-cross{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(3,auto);align-items:center;justify-items:center;width:100%;max-width:760px;gap:10px}.cross-card{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0}.cross-left{grid-column:1;grid-row:2}.cross-right{grid-column:3;grid-row:2}.cross-top{grid-column:2;grid-row:1}.cross-bottom{grid-column:2;grid-row:3}.cross-center{grid-column:2;grid-row:2}.cross-label{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:rgba(245,230,255,.65);white-space:nowrap}@media(max-width:800px){.tarot-table{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}}@media(max-width:480px){.tarot-table{grid-template-columns:repeat(5,minmax(0,1fr));gap:7px}.spread-inner{border-radius:6px}.spread-star{font-size:14px}.spread-moon{font-size:8px;top:5px;left:5px}.spread-moon-right{top:auto;left:auto;right:5px;bottom:5px}}
       `}</style>
     </div>
   )
