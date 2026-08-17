@@ -56,6 +56,7 @@ export default function Premium() {
   const [question, setQuestion] = useState('')
   const [count, setCount] = useState(3)
   const [cards, setCards] = useState([])
+  const [drawnCount, setDrawnCount] = useState(0)
   const [lang, setLang] = useState('fr')
   const [consent, setConsent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -85,9 +86,15 @@ export default function Premium() {
 
   function performSpread() {
     setCards(drawCards(count))
+    setDrawnCount(0)
     setResult(null)
     setError('')
     setStep(3)
+  }
+
+  function drawNextCard() {
+    if (drawnCount >= count) return
+    setDrawnCount(v => Math.min(v + 1, count))
   }
 
   async function revealReading() {
@@ -129,6 +136,7 @@ export default function Premium() {
     setStep(1)
     setQuestion('')
     setCards([])
+    setDrawnCount(0)
     setResult(null)
     setError('')
   }
@@ -317,52 +325,90 @@ export default function Premium() {
           <section className="max-w-4xl mx-auto rounded-[28px] bg-white/[0.055] border border-white/10 p-7 md:p-10 shadow-2xl">
             <div className="text-center">
               <div className="text-xs uppercase tracking-[0.25em] text-amber-100/65">
-                {lang === 'en' ? 'The cards are set' : 'Le tirage est posé'}
+                {lang === 'en' ? 'The ritual begins' : 'Le rituel commence'}
               </div>
+
               <h2 className="text-2xl md:text-3xl font-serif mt-3">
-                {lang === 'en'
-                  ? 'Take a moment to look'
-                  : 'Prenez un instant pour regarder'}
+                {drawnCount < count
+                  ? (lang === 'en' ? 'Draw the cards yourself' : 'Tirez vous-même les cartes')
+                  : (lang === 'en' ? 'Your spread is set' : 'Votre tirage est posé')}
               </h2>
+
               <p className="mt-4 text-violet-200 leading-7 max-w-2xl mx-auto">
-                {lang === 'en'
-                  ? 'The cards have answered the call of your question. Before revealing their message, simply observe what draws your eye first.'
-                  : 'Les cartes ont répondu à l’appel de votre question. Avant de révéler leur message, observez simplement ce qui attire votre regard en premier.'}
+                {drawnCount < count
+                  ? (lang === 'en'
+                      ? 'Keep your question in mind. Touch the deck each time you feel ready to reveal the next card.'
+                      : 'Gardez votre question à l’esprit. Touchez le jeu chaque fois que vous vous sentez prêt à révéler la carte suivante.')
+                  : (lang === 'en'
+                      ? 'All the cards have now taken their place. Take a moment to observe them before revealing the reading.'
+                      : 'Toutes les cartes ont maintenant trouvé leur place. Prenez un instant pour les observer avant de révéler la lecture.')}
               </p>
             </div>
 
-            {count === 5 ? (
-              <div className="tarot-cross mt-9 mx-auto">
-                {cards.map((c, i) => {
-                  const positions = ['cross-left','cross-right','cross-top','cross-bottom','cross-center']
-                  const labels = lang === 'en'
-                    ? ['1 · Left', '2 · Right', '3 · Top', '4 · Bottom', '5 · Centre']
-                    : ['1 · Gauche', '2 · Droite', '3 · Haut', '4 · Bas', '5 · Centre']
+            {drawnCount < count && (
+              <div className="mt-9 flex flex-col items-center">
+                <button
+                  onClick={drawNextCard}
+                  className="tarot-deck-button"
+                  aria-label={lang === 'en' ? 'Draw the next card' : 'Tirer la carte suivante'}
+                >
+                  <span className="tarot-deck-shadow tarot-deck-shadow-1" />
+                  <span className="tarot-deck-shadow tarot-deck-shadow-2" />
+                  <span className="tarot-deck-face">
+                    <span className="tarot-deck-moon">☾</span>
+                    <span className="tarot-deck-star">✦</span>
+                    <span className="tarot-deck-moon tarot-deck-moon-right">☽</span>
+                  </span>
+                </button>
 
-                  return (
-                    <div
-                      key={`${c.name}-${i}`}
-                      className={`cross-card ${positions[i]} animate-[fadeIn_.7s_ease-out]`}
-                      style={{ animationDelay: `${i * 180}ms`, animationFillMode: 'both' }}
-                    >
-                      <div className="cross-label">{labels[i]}</div>
-                      <TarotCard name={c.name} meaning={{ up: c.up, rev: c.rev }} index={c.idx} />
-                    </div>
-                  )
-                })}
+                <div className="mt-5 text-sm tracking-[0.16em] uppercase text-amber-100/70">
+                  {lang === 'en'
+                    ? `Card ${drawnCount + 1} of ${count}`
+                    : `Carte ${drawnCount + 1} sur ${count}`}
+                </div>
+
+                <div className="mt-2 text-violet-300 text-sm">
+                  {lang === 'en' ? 'Touch the deck' : 'Touchez le jeu'}
+                </div>
               </div>
-            ) : (
-              <div className={`mt-9 grid gap-6 ${count === 1 ? 'grid-cols-1 max-w-xs mx-auto' : 'grid-cols-1 sm:grid-cols-3'}`}>
-                {cards.map((c, i) => (
-                  <div
-                    key={`${c.name}-${i}`}
-                    className="flex justify-center animate-[fadeIn_.7s_ease-out]"
-                    style={{ animationDelay: `${i * 180}ms`, animationFillMode: 'both' }}
-                  >
-                    <TarotCard name={c.name} meaning={{ up: c.up, rev: c.rev }} index={c.idx} />
+            )}
+
+            {drawnCount > 0 && (
+              <>
+                {count === 5 ? (
+                  <div className="tarot-cross mt-9 mx-auto">
+                    {cards.slice(0, drawnCount).map((c, i) => {
+                      const positions = ['cross-left','cross-right','cross-top','cross-bottom','cross-center']
+                      const labels = lang === 'en'
+                        ? ['1 · Left', '2 · Right', '3 · Top', '4 · Bottom', '5 · Centre']
+                        : ['1 · Gauche', '2 · Droite', '3 · Haut', '4 · Bas', '5 · Centre']
+
+                      return (
+                        <div
+                          key={`${c.name}-${i}`}
+                          className={`cross-card ${positions[i]} animate-[cardReveal_.75s_cubic-bezier(.2,.8,.2,1)]`}
+                          style={{ animationFillMode: 'both' }}
+                        >
+                          <div className="cross-label">{labels[i]}</div>
+                          <TarotCard name={c.name} meaning={{ up: c.up, rev: c.rev }} index={c.idx} />
+                        </div>
+                      )
+                    })}
                   </div>
-                ))}
-              </div>
+                ) : (
+                  <div className={`mt-9 grid gap-6 ${count === 1 ? 'grid-cols-1 max-w-xs mx-auto' : 'grid-cols-3 max-w-3xl mx-auto'}`}>
+                    {cards.slice(0, drawnCount).map((c, i) => (
+                      <div
+                        key={`${c.name}-${i}`}
+                        className="flex justify-center animate-[cardReveal_.75s_cubic-bezier(.2,.8,.2,1)]"
+                        style={{ animationFillMode: 'both' }}
+                      >
+                        <TarotCard name={c.name} meaning={{ up: c.up, rev: c.rev }} index={c.idx} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {error && (
@@ -371,17 +417,19 @@ export default function Premium() {
               </div>
             )}
 
-            <div className="mt-10 text-center">
-              <button
-                onClick={revealReading}
-                disabled={loading}
-                className="bg-amber-200 hover:bg-amber-100 disabled:opacity-60 text-violet-950 px-8 py-3.5 rounded-full font-semibold shadow-lg transition"
-              >
-                {loading
-                  ? (lang === 'en' ? 'The message is unfolding…' : 'Le message se dévoile…')
-                  : (lang === 'en' ? 'Reveal the reading ✦' : 'Révéler la lecture ✦')}
-              </button>
-            </div>
+            {drawnCount === count && (
+              <div className="mt-10 text-center">
+                <button
+                  onClick={revealReading}
+                  disabled={loading}
+                  className="bg-amber-200 hover:bg-amber-100 disabled:opacity-60 text-violet-950 px-8 py-3.5 rounded-full font-semibold shadow-lg transition"
+                >
+                  {loading
+                    ? (lang === 'en' ? 'The message is unfolding…' : 'Le message se dévoile…')
+                    : (lang === 'en' ? 'Reveal the reading ✦' : 'Révéler la lecture ✦')}
+                </button>
+              </div>
+            )}
           </section>
         )}
 
@@ -491,6 +539,88 @@ export default function Premium() {
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(14px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes cardReveal {
+          0% { opacity: 0; transform: translateY(-22px) rotateY(90deg) scale(.92); }
+          55% { opacity: 1; transform: translateY(4px) rotateY(14deg) scale(1.02); }
+          100% { opacity: 1; transform: translateY(0) rotateY(0) scale(1); }
+        }
+
+        .tarot-deck-button {
+          position: relative;
+          width: 150px;
+          height: 230px;
+          border: 0;
+          background: transparent;
+          cursor: pointer;
+          padding: 0;
+          transition: transform .25s ease, filter .25s ease;
+          filter: drop-shadow(0 20px 24px rgba(0,0,0,.38));
+        }
+
+        .tarot-deck-button:hover {
+          transform: translateY(-4px) scale(1.025);
+        }
+
+        .tarot-deck-button:active {
+          transform: translateY(2px) scale(.985);
+        }
+
+        .tarot-deck-shadow,
+        .tarot-deck-face {
+          position: absolute;
+          inset: 0;
+          border-radius: 14px;
+        }
+
+        .tarot-deck-shadow {
+          background: #281538;
+          border: 1px solid rgba(255,240,205,.22);
+        }
+
+        .tarot-deck-shadow-1 {
+          transform: translate(8px, 7px) rotate(2deg);
+          opacity: .72;
+        }
+
+        .tarot-deck-shadow-2 {
+          transform: translate(4px, 3px) rotate(1deg);
+          opacity: .88;
+        }
+
+        .tarot-deck-face {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background:
+            radial-gradient(circle at center, rgba(245,216,153,.14) 0 20%, transparent 21%),
+            repeating-radial-gradient(circle at center, transparent 0 11px, rgba(245,216,153,.08) 12px 13px),
+            linear-gradient(145deg, #3b1d50, #1b1026);
+          border: 2px solid rgba(245,216,153,.55);
+          box-shadow: inset 0 0 0 7px rgba(20,8,28,.62);
+          color: #f0dca6;
+          overflow: hidden;
+        }
+
+        .tarot-deck-star {
+          font-size: 48px;
+          text-shadow: 0 0 20px rgba(240,220,166,.36);
+        }
+
+        .tarot-deck-moon {
+          position: absolute;
+          top: 28px;
+          left: 22px;
+          font-size: 23px;
+          opacity: .8;
+        }
+
+        .tarot-deck-moon-right {
+          top: auto;
+          left: auto;
+          right: 22px;
+          bottom: 28px;
         }
 
         .tarot-cross {
