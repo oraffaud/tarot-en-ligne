@@ -331,17 +331,39 @@ export default function Premium() {
               </p>
             </div>
 
-            <div className={`mt-9 grid gap-6 ${count === 1 ? 'grid-cols-1 max-w-xs mx-auto' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'}`}>
-              {cards.map((c, i) => (
-                <div
-                  key={`${c.name}-${i}`}
-                  className="flex justify-center animate-[fadeIn_.7s_ease-out]"
-                  style={{ animationDelay: `${i * 180}ms`, animationFillMode: 'both' }}
-                >
-                  <TarotCard name={c.name} meaning={{ up: c.up, rev: c.rev }} index={c.idx} />
-                </div>
-              ))}
-            </div>
+            {count === 5 ? (
+              <div className="tarot-cross mt-9 mx-auto">
+                {cards.map((c, i) => {
+                  const positions = ['cross-left','cross-right','cross-top','cross-bottom','cross-center']
+                  const labels = lang === 'en'
+                    ? ['1 · Left', '2 · Right', '3 · Top', '4 · Bottom', '5 · Centre']
+                    : ['1 · Gauche', '2 · Droite', '3 · Haut', '4 · Bas', '5 · Centre']
+
+                  return (
+                    <div
+                      key={`${c.name}-${i}`}
+                      className={`cross-card ${positions[i]} animate-[fadeIn_.7s_ease-out]`}
+                      style={{ animationDelay: `${i * 180}ms`, animationFillMode: 'both' }}
+                    >
+                      <div className="cross-label">{labels[i]}</div>
+                      <TarotCard name={c.name} meaning={{ up: c.up, rev: c.rev }} index={c.idx} />
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className={`mt-9 grid gap-6 ${count === 1 ? 'grid-cols-1 max-w-xs mx-auto' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                {cards.map((c, i) => (
+                  <div
+                    key={`${c.name}-${i}`}
+                    className="flex justify-center animate-[fadeIn_.7s_ease-out]"
+                    style={{ animationDelay: `${i * 180}ms`, animationFillMode: 'both' }}
+                  >
+                    <TarotCard name={c.name} meaning={{ up: c.up, rev: c.rev }} index={c.idx} />
+                  </div>
+                ))}
+              </div>
+            )}
 
             {error && (
               <div className="mt-5 rounded-2xl border border-red-200/20 bg-red-200/10 px-4 py-3 text-red-100">
@@ -469,6 +491,63 @@ export default function Premium() {
         @keyframes fadeIn {
           from { opacity: 0; transform: translateY(14px); }
           to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tarot-cross {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          grid-template-rows: repeat(3, auto);
+          align-items: center;
+          justify-items: center;
+          width: 100%;
+          max-width: 760px;
+          gap: 10px;
+        }
+
+        .cross-card {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          min-width: 0;
+        }
+
+        .cross-left { grid-column: 1; grid-row: 2; }
+        .cross-right { grid-column: 3; grid-row: 2; }
+        .cross-top { grid-column: 2; grid-row: 1; }
+        .cross-bottom { grid-column: 2; grid-row: 3; }
+        .cross-center { grid-column: 2; grid-row: 2; }
+
+        .cross-label {
+          margin-bottom: 6px;
+          font-size: 11px;
+          letter-spacing: .08em;
+          text-transform: uppercase;
+          color: rgba(245,230,255,.65);
+          white-space: nowrap;
+        }
+
+        @media (max-width: 639px) {
+          .tarot-cross {
+            max-width: 390px;
+            gap: 0;
+          }
+
+          .cross-card {
+            width: 108px;
+            height: 205px;
+          }
+
+          .cross-card > div:last-child {
+            transform: scale(.60);
+            transform-origin: center center;
+          }
+
+          .cross-label {
+            margin-bottom: -22px;
+            font-size: 9px;
+            z-index: 2;
+          }
         }
       `}</style>
     </div>
