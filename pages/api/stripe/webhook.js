@@ -27,9 +27,9 @@ export default async function handler(req, res) {
     const session = event.data.object
     const db = getPaymentStore()
     const paid = session.payment_status === 'paid'
+    const readingId = session.metadata?.reading_id || null
 
-    const { error } = await db.from('premium_payments').upsert({
-      checkout_session_id: session.id,
+    const patch = {
       payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
       customer_id: typeof session.customer === 'string' ? session.customer : null,
       customer_email: session.customer_details?.email || null,
@@ -39,10 +39,19 @@ export default async function handler(req, res) {
       payment_status: paid ? 'paid' : session.payment_status || 'unpaid',
       completed_at: paid ? new Date().toISOString() : null,
       updated_at: new Date().toISOString()
-    }, { onConflict: 'checkout_session_id' })
+    }
 
-    if (error) {
-      console.error('stripe webhook persistence', error)
+    let query = db
+      .from('premium_payments')
+      .update(patch)
+      .eq('checkout_session_id', session.id)
+
+    if (readingId) query = query.eq('reading_id', readingId)
+
+    const { data, error } = await query.select('id').maybeSingle()
+
+    if (error || !data) {
+      console.error('stripe webhook persistence', error || new Error('Checkout session has no bound reading'))
       return res.status(500).end('Persistence error')
     }
   }
