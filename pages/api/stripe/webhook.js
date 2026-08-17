@@ -27,22 +27,33 @@ export default async function handler(req, res) {
     const session = event.data.object
     const db = getPaymentStore()
     const paid = session.payment_status === 'paid'
+    const readingId = session.metadata?.reading_id || null
 
-    const { error } = await db.from('premium_payments').upsert({
-      checkout_session_id: session.id,
-      payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
-      customer_id: typeof session.customer === 'string' ? session.customer : null,
-      customer_email: session.customer_details?.email || null,
-      price_id: process.env.STRIPE_PREMIUM_PRICE_ID || null,
-      amount_total: session.amount_total,
-      currency: session.currency,
-      payment_status: paid ? 'paid' : session.payment_status || 'unpaid',
-      completed_at: paid ? new Date().toISOString() : null,
-      updated_at: new Date().toISOString()
-    }, { onConflict: 'checkout_session_id' })
+    if (!readingId) {
+      console.error('stripe webhook persistence', new Error('Missing reading_id metadata'))
+      return res.status(500).end('Missing reading binding')
+    }
 
-    if (error) {
-      console.error('stripe webhook persistence', error)
+    const { data, error } = await db
+      .from('premium_payments')
+      .update({
+        payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+        customer_id: typeof session.customer === 'string' ? session.customer : null,
+        customer_email: session.customer_details?.email || null,
+        price_id: process.env.STRIPE_PREMIUM_PRICE_ID || null,
+        amount_total: session.amount_total,
+        currency: session.currency,
+        payment_status: paid ? 'paid' : session.payment_status || 'unpaid',
+        completed_at: paid ? new Date().toISOString() : null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('checkout_session_id', session.id)
+      .eq('reading_id', readingId)
+      .select('id')
+      .maybeSingle()
+
+    if (error || !data) {
+      console.error('stripe webhook persistence', error || new Error('Checkout session has no bound reading'))
       return res.status(500).end('Persistence error')
     }
   }
