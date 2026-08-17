@@ -1,5 +1,7 @@
 import { getPaymentStore } from '../../../lib/stripeServer'
 
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' })
 
@@ -8,13 +10,20 @@ export default async function handler(req, res) {
 
   try {
     const db = getPaymentStore()
-    const { data, error } = await db
-      .from('premium_payments')
-      .select('payment_status, customer_email, amount_total, currency')
-      .eq('checkout_session_id', sessionId)
-      .maybeSingle()
+    let data = null
 
-    if (error) throw error
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const result = await db
+        .from('premium_payments')
+        .select('payment_status, customer_email, amount_total, currency')
+        .eq('checkout_session_id', sessionId)
+        .maybeSingle()
+
+      if (result.error) throw result.error
+      data = result.data
+      if (data?.payment_status === 'paid') break
+      if (attempt < 7) await sleep(500)
+    }
 
     return res.status(200).json({
       paid: data?.payment_status === 'paid',
