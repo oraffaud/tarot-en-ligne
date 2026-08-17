@@ -1,7 +1,12 @@
-import { buffer } from 'micro'
 import { getStripe, getPaymentStore } from '../../../lib/stripeServer'
 
 export const config = { api: { bodyParser: false } }
+
+async function readRawBody(req) {
+  const chunks = []
+  for await (const chunk of req) chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk)
+  return Buffer.concat(chunks)
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end('Method not allowed')
@@ -12,7 +17,7 @@ export default async function handler(req, res) {
   let event
 
   try {
-    event = stripe.webhooks.constructEvent(await buffer(req), signature, process.env.STRIPE_WEBHOOK_SECRET)
+    event = stripe.webhooks.constructEvent(await readRawBody(req), signature, process.env.STRIPE_WEBHOOK_SECRET)
   } catch (err) {
     console.error('stripe webhook signature', err)
     return res.status(400).send(`Webhook Error: ${err.message}`)
