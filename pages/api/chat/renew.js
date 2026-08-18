@@ -2,8 +2,8 @@ import Stripe from 'stripe'
 
 function getTestStripe() {
   if (process.env.VERCEL_ENV === 'production') throw new Error('Chat preview billing is disabled in production')
-  const key = process.env.STRIPE_CHAT_SECRET_KEY || ''
-  if (!key.startsWith('sk_test_')) throw new Error('STRIPE_CHAT_SECRET_KEY must be a Stripe test secret key')
+  const key = process.env.STRIPE_SECRET_KEY || ''
+  if (!key.startsWith('sk_test_')) throw new Error('STRIPE_SECRET_KEY must be a Stripe test secret key in Preview')
   return new Stripe(key)
 }
 
