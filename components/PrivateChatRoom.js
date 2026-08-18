@@ -23,28 +23,44 @@ export default function PrivateChatRoom({ id, token, role, ownerPreviewUrl = '' 
   useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t) }, [])
 
   const timing = useMemo(() => {
-    if (!room?.started_at) return { remaining: 0, warn: false, nextBlock: 2 }
+    if (!room?.started_at) return { remaining: 0, warn: false, dueBlock: 1, elapsed: 0 }
     const blockSeconds = room.accelerated ? 60 : 600
     const elapsed = Math.max(0, Math.floor((now - new Date(room.started_at).getTime()) / 1000))
+    const completedBlocks = Math.floor(elapsed / blockSeconds)
     const into = elapsed % blockSeconds
-    const remaining = blockSeconds - into
-    return { remaining, warn: remaining <= (room.accelerated ? 10 : 60), nextBlock: Math.floor(elapsed / blockSeconds) + 2, elapsed }
+    const remaining = into === 0 && elapsed > 0 ? 0 : blockSeconds - into
+    return {
+      remaining,
+      warn: elapsed > 0 && remaining > 0 && remaining <= (room.accelerated ? 10 : 60),
+      dueBlock: completedBlocks + 1,
+      elapsed
+    }
   }, [room, now])
 
   useEffect(() => {
     if (role !== 'customer' || !room || room.status !== 'active') return
     const blockSeconds = room.accelerated ? 60 : 600
     const elapsed = timing.elapsed || 0
-    if (!elapsed || elapsed % blockSeconds !== 0) return
-    const block = Math.floor(elapsed / blockSeconds) + 1
-    if (block <= room.billing_block || renewed.current.has(block)) return
-    renewed.current.add(block)
+    const dueBlock = Math.floor(elapsed / blockSeconds) + 1
+    if (dueBlock <= room.billing_block || renewed.current.has(dueBlock)) return
+    renewed.current.add(dueBlock)
     ;(async () => {
       setBusy(true); setError('')
-      const r = await fetch('/api/chat/renew', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, token, block }) })
-      const data = await r.json().catch(() => ({}))
-      if (!r.ok || !data.paid) setError(data.detail || data.error || 'Le renouvellement a échoué')
-      await refresh(); setBusy(false)
+      try {
+        const r = await fetch('/api/chat/renew', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id, token, block: dueBlock })
+        })
+        const data = await r.json().catch(() => ({}))
+        if (!r.ok || !data.paid) throw new Error(data.detail || data.error || 'Le renouvellement a échoué')
+        await refresh()
+      } catch (e) {
+        renewed.current.delete(dueBlock)
+        setError(e.message)
+      } finally {
+        setBusy(false)
+      }
     })()
   }, [timing.elapsed, room, role, id, token])
 
@@ -89,6 +105,6 @@ export default function PrivateChatRoom({ id, token, role, ownerPreviewUrl = '' 
       <button onClick={end} disabled={room?.status !== 'active'} className="mt-4 w-full rounded-full bg-white/10 border border-white/15 py-3 disabled:opacity-40">Terminer la consultation</button>
     </section>
 
-    {role === 'customer' && ownerPreviewUrl && <section className="mt-5 rounded-2xl border border-amber-300/30 bg-amber-100/10 p-4 text-sm"><strong>Diagnostic Preview :</strong> e-mail propriétaire en cours de configuration. URL propriétaire de test : <a className="underline break-all" href={ownerPreviewUrl}>{ownerPreviewUrl}</a></section>}
+    {role === 'customer' && ownerPreviewUrl && <section className="mt-5 rounded-2xl border border-amber-300/30 bg-amber-100/10 p-4 text-sm"><strong>Diagnostic Preview :</strong> URL propriétaire de test : <a className="underline break-all" href={ownerPreviewUrl}>{ownerPreviewUrl}</a></section>}
   </main>
 }
