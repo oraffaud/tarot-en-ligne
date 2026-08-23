@@ -1,4 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /chat/
+Disallow: /chat-preview
+Disallow: /consultante/
+Disallow: /premium/result
 
-Sitemap: https://tarot-en-ligne.vercel.app/sitemap.xml
+Sitemap: https://www.1001perspectives.com/sitemap.xml
