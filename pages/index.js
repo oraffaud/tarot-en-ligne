@@ -1,4 +1,5 @@
 import Head from 'next/head'
+import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/router'
 import Header from '../components/Header'
@@ -86,9 +87,23 @@ export default function Home() {
       <Head>
         <title>{lang === 'en' ? "Nanou’s Tarot — Free reading" : 'Les tarots de Nanou — Tirage découverte'}</title>
         <meta name="description" content={lang === 'en' ? 'Ask your question, draw the Tarot de Marseille cards yourself and discover a first symbolic reading.' : 'Posez votre question, tirez vous-même les cartes du Tarot de Marseille et découvrez un premier éclairage symbolique.'} />
+        <link rel="canonical" href="https://www.1001perspectives.com/" />
+        <link rel="alternate" hrefLang="fr" href="https://www.1001perspectives.com/" />
+        <link rel="alternate" hrefLang="en" href="https://www.1001perspectives.com/?lang=en" />
+        <link rel="alternate" hrefLang="x-default" href="https://www.1001perspectives.com/" />
         <link rel="icon" href="/favicon.svg" />
       </Head>
       <Header />
+
+      <nav className="max-w-5xl mx-auto px-5 md:px-6 pt-2" aria-label={lang === 'en' ? 'Tarot guides' : 'Guides tarot'}>
+        <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-violet-200">
+          <Link href={lang === 'en' ? '/en/marseille-tarot' : '/fr/tarot-de-marseille'}>{lang === 'en' ? 'Marseille Tarot' : 'Tarot de Marseille'}</Link>
+          <Link href={lang === 'en' ? '/en/online-tarot-reading' : '/fr/tirage-tarot-en-ligne'}>{lang === 'en' ? 'Online reading' : 'Tirage en ligne'}</Link>
+          <Link href={lang === 'en' ? '/en/love-tarot' : '/fr/tirage-amour'}>{lang === 'en' ? 'Love Tarot' : 'Tarot amour'}</Link>
+          <Link href={lang === 'en' ? '/en/career-tarot' : '/fr/tirage-travail'}>{lang === 'en' ? 'Career Tarot' : 'Tarot travail'}</Link>
+          <Link href={lang === 'en' ? '/en/tarot-reader' : '/fr/consultation-tarologue'}>{lang === 'en' ? 'Tarot reader' : 'Consultation'}</Link>
+        </div>
+      </nav>
 
       <main className="max-w-5xl mx-auto px-5 md:px-6 pb-20">
         {step === 1 && (
