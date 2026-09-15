@@ -1,18 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://tarot-en-ligne.vercel.app/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://tarot-en-ligne.vercel.app/mentions-legales</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://tarot-en-ligne.vercel.app/confidentialite</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.5</priority>
-  </url>
+<url><loc>https://www.1001perspectives.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+<url><loc>https://www.1001perspectives.com/fr/tarot-de-marseille</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/tirage-tarot-en-ligne</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/tirage-amour</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/tirage-travail</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/consultation-tarologue</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/le-mat</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/le-bateleur</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/la-papesse</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/limperatrice</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/lempereur</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/le-pape</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/les-amoureux</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/le-chariot</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/la-justice</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/lhermite</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/la-roue-de-fortune</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/la-force</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/le-pendu</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/larcane-sans-nom</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/temperance</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/le-diable</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/la-maison-dieu</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/letoile</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/la-lune</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/le-soleil</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/le-jugement</loc></url>
+<url><loc>https://www.1001perspectives.com/fr/le-monde</loc></url>
+<url><loc>https://www.1001perspectives.com/en/marseille-tarot</loc></url>
+<url><loc>https://www.1001perspectives.com/en/online-tarot-reading</loc></url>
+<url><loc>https://www.1001perspectives.com/en/love-tarot</loc></url>
+<url><loc>https://www.1001perspectives.com/en/career-tarot</loc></url>
+<url><loc>https://www.1001perspectives.com/en/tarot-reader</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-fool</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-magician</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-high-priestess</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-empress</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-emperor</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-hierophant</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-lovers</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-chariot</loc></url>
+<url><loc>https://www.1001perspectives.com/en/justice</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-hermit</loc></url>
+<url><loc>https://www.1001perspectives.com/en/wheel-of-fortune</loc></url>
+<url><loc>https://www.1001perspectives.com/en/strength</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-hanged-man</loc></url>
+<url><loc>https://www.1001perspectives.com/en/death</loc></url>
+<url><loc>https://www.1001perspectives.com/en/temperance</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-devil</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-tower</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-star</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-moon</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-sun</loc></url>
+<url><loc>https://www.1001perspectives.com/en/judgement</loc></url>
+<url><loc>https://www.1001perspectives.com/en/the-world</loc></url>
 </urlset>
