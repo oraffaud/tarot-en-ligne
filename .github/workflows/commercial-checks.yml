@@ -1,0 +1,88 @@
+name: Commercial journey checks
+on:
+  pull_request:
+  push:
+    branches: ['commercial/**']
+permissions:
+  contents: read
+concurrency:
+  group: commercial-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-fund --no-audit
+      - run: node --test scripts/security.test.mjs
+      - run: npm run build
+      - name: Install isolated browser test tooling
+        run: |
+          npm install --prefix /tmp/commercial-browser --no-save --ignore-scripts --no-fund --no-audit @playwright/test@1.63.0
+          /tmp/commercial-browser/node_modules/.bin/playwright install --with-deps chromium
+      - name: Verify only public pages and rejection paths; no real payment or AI call
+        run: |
+          mkdir -p commercial-test-results
+          npm run start -- -H 127.0.0.1 -p 3100 > /tmp/commercial-next.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" || true' EXIT
+          node --input-type=module <<'NODE'
+          import assert from 'node:assert/strict';
+          import fs from 'node:fs';
+          import { createRequire } from 'node:module';
+          const {chromium,expect}=createRequire('/tmp/commercial-browser/package.json')('@playwright/test');
+          const base='http://127.0.0.1:3100';
+          let ready=false;
+          for(let n=0;n<60;n++){try{if((await fetch(base)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,500));}
+          assert.ok(ready,'Local server must be ready');
+          const browser=await chromium.launch();const results=[];const links=new Set();
+          const paths=['/fr/lecture-premium','/en/premium-reading'];
+          try {
+            for(const width of [1440,390]) {
+              const context=await browser.newContext({viewport:{width,height:950}});
+              await context.route('**/*',r=>new URL(r.request().url()).origin===base?r.continue():r.abort());
+              const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
+              for(const path of paths){
+                const raw=await fetch(base+path);assert.equal(raw.status,200);const html=await raw.text();
+                assert.match(html,/<title\b[^>]*>[^<]+<\/title>/i);assert.ok(html.includes('19'));assert.ok(html.includes(path));
+                assert.ok(html.includes(path.startsWith('/fr')?'automatisée':'automated'));
+                await page.goto(base+path);await page.waitForTimeout(300);
+                await expect(page.locator('h1')).toHaveCount(1);await expect(page.locator('h1')).toBeVisible();
+                await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href','https://www.1001perspectives.com'+path);
+                await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content',/^index/);
+                for(const [lang,target] of [['fr',paths[0]],['en',paths[1]]])await expect(page.locator(`link[hreflang="${lang}"]`)).toHaveAttribute('href','https://www.1001perspectives.com'+target);
+                assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'No page overflow');
+                await page.locator('details summary').first().click();await expect(page.locator('details').first()).toHaveAttribute('open','');
+                const hrefs=await page.locator('main a').evaluateAll(a=>a.map(n=>n.getAttribute('href')));
+                for(const href of hrefs){if(!href?.startsWith('/')||href.startsWith('//')||href.startsWith('/api/')||links.has(href))continue;links.add(href);assert.ok((await fetch(base+href)).status<400,`Broken link ${href}`);}
+                await page.screenshot({path:`commercial-test-results/${path.startsWith('/fr')?'fr':'en'}-offer-${width}.png`,fullPage:true});
+                results.push({path,width,ssr:true,canonical:true,responsive:true});
+              }
+              await page.goto(base+'/');await expect(page.locator('header a[href="/fr/lecture-premium"]')).toBeVisible();
+              await page.locator('header a[href="/fr/lecture-premium"]').click();await expect(page).toHaveURL(base+paths[0]);
+              await page.locator('header a[hreflang="en"]').click();await expect(page).toHaveURL(base+paths[1]);
+              await page.goto(base+'/premium');await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content',/noindex/);
+              assert.deepEqual(errors,[]);await context.close();
+            }
+          } finally {await browser.close();}
+          const translation=await fetch(base+'/api/admin/translate-chat',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});assert.equal(translation.status,401);
+          const premium=await fetch(base+'/api/premium/interpret',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({cards:[{name:'Le Mat'}],question:'',lang:'fr'})});assert.equal(premium.status,402);
+          const sitemap=await (await fetch(base+'/sitemap.xml')).text();for(const path of paths)assert.ok(sitemap.includes(path));
+          fs.writeFileSync('commercial-test-results/results.json',JSON.stringify({passed:true,checks:results,links:[...links],translation:translation.status,premium:premium.status,payment:'not invoked'},null,2));
+          console.log(JSON.stringify({passed:true,pageChecks:results.length,linksChecked:links.size,translation:401,premium:402}));
+          NODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: commercial-journey-results
+          path: commercial-test-results/
+          retention-days: 5
