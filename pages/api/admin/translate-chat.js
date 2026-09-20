@@ -1,6 +1,10 @@
+import { requireOwner } from '../../../lib/serverSecurity.js'
+export const config = { api: { bodyParser: { sizeLimit: '16kb' } } }
 import OpenAI from 'openai'
 export default async function handler(req,res){
   if(req.method!=='POST') return res.status(405).json({error:'Method not allowed'})
+  res.setHeader('Cache-Control','no-store')
+  try { await requireOwner(req) } catch(error) { return res.status(error.status||503).json({error:error.status?error.message:'Access verification unavailable'}) }
   const text=String(req.body?.text||'').trim().slice(0,4000)
   if(!text) return res.status(400).json({error:'Missing text'})
   if(!process.env.OPENAI_API_KEY) return res.status(500).json({error:'Missing OPENAI_API_KEY'})

@@ -141,6 +141,7 @@ export default function Premium() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          paymentSessionId: typeof router.query.session_id === 'string' ? router.query.session_id : window.localStorage.getItem('nanou_paid_session_id'),
           cards: cards.slice(0, count),
           question,
           lang,
