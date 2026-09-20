@@ -39,7 +39,7 @@ jobs:
           import assert from 'node:assert/strict';
           import fs from 'node:fs';
           import { createRequire } from 'node:module';
-          const {chromium}=createRequire('/tmp/commercial-browser/package.json')('@playwright/test');
+          const {chromium,expect}=createRequire('/tmp/commercial-browser/package.json')('@playwright/test');
           const base='http://127.0.0.1:3100';
           let ready=false;
           for(let n=0;n<60;n++){try{if((await fetch(base)).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,500));}
@@ -53,24 +53,24 @@ jobs:
               const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
               for(const path of paths){
                 const raw=await fetch(base+path);assert.equal(raw.status,200);const html=await raw.text();
-                assert.ok(html.includes('<title>'));assert.ok(html.includes('19'));assert.ok(html.includes(path));
+                assert.match(html,/<title\b[^>]*>[^<]+<\/title>/i);assert.ok(html.includes('19'));assert.ok(html.includes(path));
                 assert.ok(html.includes(path.startsWith('/fr')?'automatisée':'automated'));
                 await page.goto(base+path);await page.waitForTimeout(300);
-                assert.equal(await page.locator('h1').count(),1);assert.ok(await page.locator('h1').isVisible());
-                assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),'https://www.1001perspectives.com'+path);
-                assert.ok((await page.locator('meta[name="robots"]').getAttribute('content')).startsWith('index'));
-                for(const [lang,target] of [['fr',paths[0]],['en',paths[1]]])assert.equal(await page.locator(`link[hreflang="${lang}"]`).getAttribute('href'),'https://www.1001perspectives.com'+target);
+                await expect(page.locator('h1')).toHaveCount(1);await expect(page.locator('h1')).toBeVisible();
+                await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href','https://www.1001perspectives.com'+path);
+                await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content',/^index/);
+                for(const [lang,target] of [['fr',paths[0]],['en',paths[1]]])await expect(page.locator(`link[hreflang="${lang}"]`)).toHaveAttribute('href','https://www.1001perspectives.com'+target);
                 assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2),'No page overflow');
-                await page.locator('details summary').first().click();assert.equal(await page.locator('details').first().getAttribute('open'),'');
+                await page.locator('details summary').first().click();await expect(page.locator('details').first()).toHaveAttribute('open','');
                 const hrefs=await page.locator('main a').evaluateAll(a=>a.map(n=>n.getAttribute('href')));
                 for(const href of hrefs){if(!href?.startsWith('/')||href.startsWith('//')||href.startsWith('/api/')||links.has(href))continue;links.add(href);assert.ok((await fetch(base+href)).status<400,`Broken link ${href}`);}
                 await page.screenshot({path:`commercial-test-results/${path.startsWith('/fr')?'fr':'en'}-offer-${width}.png`,fullPage:true});
                 results.push({path,width,ssr:true,canonical:true,responsive:true});
               }
-              await page.goto(base+'/');assert.ok(await page.locator('header a[href="/fr/lecture-premium"]').isVisible());
-              await page.locator('header a[href="/fr/lecture-premium"]').click();assert.ok(page.url().endsWith(paths[0]));
-              await page.locator('header a[hreflang="en"]').click();assert.ok(page.url().endsWith(paths[1]));
-              await page.goto(base+'/premium');assert.ok((await page.locator('meta[name="robots"]').getAttribute('content')).includes('noindex'));
+              await page.goto(base+'/');await expect(page.locator('header a[href="/fr/lecture-premium"]')).toBeVisible();
+              await page.locator('header a[href="/fr/lecture-premium"]').click();await expect(page).toHaveURL(base+paths[0]);
+              await page.locator('header a[hreflang="en"]').click();await expect(page).toHaveURL(base+paths[1]);
+              await page.goto(base+'/premium');await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content',/noindex/);
               assert.deepEqual(errors,[]);await context.close();
             }
           } finally {await browser.close();}
