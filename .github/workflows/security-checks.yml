@@ -1,0 +1,29 @@
+name: Security checks
+on:
+  pull_request:
+  push:
+    branches: [main, staging, 'security/**']
+permissions:
+  contents: read
+concurrency:
+  group: security-checks-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38
+        with:
+          node-version: '22'
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts --no-fund --no-audit
+      - name: Fail on high or critical production dependency advisories
+        run: npm audit --omit=dev --audit-level=high
+      - name: Verify authorization and payment guards without live API calls
+        run: node --test scripts/security.test.mjs
+      - name: Build without production credentials
+        run: npm run build
