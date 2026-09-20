@@ -1,5 +1,17 @@
+import { requirePremiumSession, validateReadingInput, checkoutOrigin } from '../../../lib/serverSecurity.js'
+export const config = { api: { bodyParser: { sizeLimit: '32kb' } } }
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
+
+  res.setHeader('Cache-Control', 'no-store')
+  try {
+    checkoutOrigin(req)
+    validateReadingInput(req.body)
+    await requirePremiumSession(req.body?.paymentSessionId)
+  } catch (error) {
+    return res.status(error.status || 503).json({ error: error.status ? error.message : 'Access verification unavailable' })
+  }
 
   const { cards = [], question = '', lang = 'fr' } = req.body || {}
   const MODE = (process.env.AI_MODE || 'auto').toLowerCase()
@@ -58,6 +70,7 @@ Do not include bullet-style business language such as opportunities, cautions, a
   async function callResponses() {
     const r = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
+      signal: AbortSignal.timeout(45000),
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
@@ -69,7 +82,8 @@ Do not include bullet-style business language such as opportunities, cautions, a
           { role: 'user', content: userPrompt }
         ],
         text: { format: { type: 'json_object' } },
-        temperature: 0.85
+        temperature: 0.85,
+        max_output_tokens: 3000
       })
     })
 
@@ -136,7 +150,7 @@ Do not include bullet-style business language such as opportunities, cautions, a
     } catch (e) {
       return {
         parsed: demoPayload(),
-        meta: { mode: 'demo', reason: String(e).slice(0, 400) }
+        meta: { mode: 'demo', reason: 'provider_unavailable' }
       }
     }
   }
@@ -147,7 +161,7 @@ Do not include bullet-style business language such as opportunities, cautions, a
   } catch (e) {
     return res.status(500).json({
       error: 'AI request failed',
-      detail: String(e).slice(0, 500)
+      detail: 'The reading service is temporarily unavailable'
     })
   }
 }

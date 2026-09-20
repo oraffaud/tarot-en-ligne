@@ -67,7 +67,7 @@ export default function AdminChat() {
       if(m.sender_id===user.id || m.detected_language || translating[m.id]) continue
       setTranslating(v=>({...v,[m.id]:true}))
       try{
-        const r=await fetch('/api/admin/translate-chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:m.body})})
+        const r=await fetch('/api/admin/translate-chat',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${session?.access_token || ''}`},body:JSON.stringify({text:m.body})})
         if(!r.ok) continue
         const t=await r.json()
         await supabase.rpc('cache_message_translation',{p_message_id:m.id,p_detected_language:t.language,p_translated_body_fr:t.translation})

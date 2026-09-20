@@ -1,3 +1,4 @@
+import { checkoutOrigin } from '../../../lib/serverSecurity.js'
 import { getStripe, getPaymentStore } from '../../../lib/stripeServer'
 
 export default async function handler(req, res) {
@@ -7,10 +8,12 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Missing STRIPE_PREMIUM_PRICE_ID' })
   }
 
+  res.setHeader('Cache-Control', 'no-store')
   try {
+    checkoutOrigin(req)
     const stripe = getStripe()
     const db = getPaymentStore()
-    const origin = req.headers.origin || `https://${req.headers.host}`
+    const origin = checkoutOrigin(req)
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
@@ -36,6 +39,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ url: session.url })
   } catch (e) {
     console.error('stripe create checkout', e)
-    return res.status(500).json({ error: 'Unable to create checkout session' })
+    return res.status(e.status || 500).json({ error: e.status ? e.message : 'Unable to create checkout session' })
   }
 }

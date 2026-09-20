@@ -9,15 +9,19 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
-    "next": "14.0.0",
+    "next": "15.5.24",
     "openai": "^7.4.0",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "stripe": "^22.5.0"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",
-    "postcss": "^8.4.23",
+    "postcss": "8.5.26",
     "tailwindcss": "^3.4.7"
+  },
+  "overrides": {
+    "postcss": "$postcss",
+    "nanoid": "^3.3.18"
   }
 }
