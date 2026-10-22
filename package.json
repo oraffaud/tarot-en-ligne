@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",
-    "next": "15.5.24",
+    "next": "15.5.28",
     "openai": "^7.4.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -22,6 +22,7 @@
   },
   "overrides": {
     "postcss": "$postcss",
-    "nanoid": "^3.3.18"
+    "nanoid": "^3.3.18",
+    "source-map-js": "1.2.2"
   }
 }
