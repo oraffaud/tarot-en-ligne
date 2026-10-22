@@ -1,19 +1,95 @@
+import crypto from 'node:crypto'
 import { requirePremiumSession, validateReadingInput, checkoutOrigin } from '../../../lib/serverSecurity.js'
+import { getPaymentStore } from '../../../lib/stripeServer.js'
+
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } }
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
   res.setHeader('Cache-Control', 'no-store')
+
+  let paymentSessionId
   try {
     checkoutOrigin(req)
     validateReadingInput(req.body)
-    await requirePremiumSession(req.body?.paymentSessionId)
+    paymentSessionId = await requirePremiumSession(req.body?.paymentSessionId)
   } catch (error) {
-    return res.status(error.status || 503).json({ error: error.status ? error.message : 'Access verification unavailable' })
+    return res.status(error.status || 503).json({
+      error: error.status ? error.message : 'Access verification unavailable'
+    })
   }
 
   const { cards = [], question = '', lang = 'fr' } = req.body || {}
+  const normalizedInput = {
+    question: String(question).trim(),
+    lang,
+    cards: cards.map(card => ({
+      name: String(card?.name || '').trim(),
+      up: String(card?.up || ''),
+      rev: String(card?.rev || '')
+    }))
+  }
+  const inputHash = crypto
+    .createHash('sha256')
+    .update(JSON.stringify(normalizedInput))
+    .digest('hex')
+
+  const db = getPaymentStore()
+  try {
+    const { error: syncError } = await db
+      .from('premium_payments')
+      .upsert({
+        checkout_session_id: paymentSessionId,
+        payment_status: 'paid',
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'checkout_session_id' })
+
+    if (syncError) throw syncError
+
+    const { data, error } = await db.rpc('claim_premium_reading', {
+      p_checkout_session_id: paymentSessionId,
+      p_input_hash: inputHash
+    })
+    if (error) throw error
+
+    const claim = Array.isArray(data) ? data[0] : data
+    if (!claim) throw new Error('Reading claim returned no result')
+
+    if (claim.action === 'cached' && claim.result) {
+      return res.status(200).json({
+        parsed: claim.result,
+        meta: { mode: 'cached' }
+      })
+    }
+
+    if (claim.action === 'processing') {
+      res.setHeader('Retry-After', '3')
+      return res.status(409).json({
+        error: 'Reading generation is already in progress'
+      })
+    }
+
+    if (claim.action === 'conflict') {
+      return res.status(409).json({
+        error: 'This payment is already bound to another Premium reading'
+      })
+    }
+
+    if (claim.action !== 'claimed') {
+      return res.status(claim.action === 'not_paid' ? 402 : 400).json({
+        error: claim.action === 'not_paid'
+          ? 'Paid Premium checkout required'
+          : 'Invalid Premium reading request'
+      })
+    }
+  } catch (error) {
+    console.error('premium reading claim', error)
+    return res.status(503).json({
+      error: 'Unable to reserve Premium reading generation'
+    })
+  }
+
   const MODE = (process.env.AI_MODE || 'auto').toLowerCase()
   const model = process.env.OPENAI_MODEL || 'gpt-4o-mini'
   const apiKey = process.env.OPENAI_API_KEY || ''
@@ -157,8 +233,29 @@ Do not include bullet-style business language such as opportunities, cautions, a
 
   try {
     const { parsed, meta } = await compute()
+    const { data: completed, error: completionError } = await db.rpc('complete_premium_reading', {
+      p_checkout_session_id: paymentSessionId,
+      p_input_hash: inputHash,
+      p_result: parsed
+    })
+
+    if (completionError || completed !== true) {
+      throw completionError || new Error('Reading completion could not be persisted')
+    }
+
     return res.status(200).json({ parsed, meta })
-  } catch (e) {
+  } catch (error) {
+    console.error('premium reading generation', error)
+    try {
+      await db.rpc('fail_premium_reading', {
+        p_checkout_session_id: paymentSessionId,
+        p_input_hash: inputHash,
+        p_error: String(error?.message || 'generation_failed')
+      })
+    } catch (persistenceError) {
+      console.error('premium reading failure persistence', persistenceError)
+    }
+
     return res.status(500).json({
       error: 'AI request failed',
       detail: 'The reading service is temporarily unavailable'
